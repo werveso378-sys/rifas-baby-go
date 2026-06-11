@@ -22,6 +22,9 @@ const Admin = () => {
   const [editName, setEditName] = useState('');
   const [editWhatsApp, setEditWhatsApp] = useState('');
 
+  // Cancel Modal State
+  const [cancelClient, setCancelClient] = useState(null);
+
   useEffect(() => {
     if (!auth) return;
     const unsubscribe = listenToNumbers(RAFFLE_ID, (data) => {
@@ -115,10 +118,14 @@ const Admin = () => {
     window.open(url, '_blank');
   };
 
-  const handleCancelClient = async (client) => {
-    if (window.confirm(`ATENÇÃO: Cancelar a reserva de ${client.name.split(' ')[0]} e devolver os números ${client.numbers.join(', ')} para venda?`)) {
-      await cancelReservation(RAFFLE_ID, client.numbers);
-    }
+  const handleCancelClient = (client) => {
+    setCancelClient(client);
+  };
+
+  const confirmCancel = async () => {
+    if (!cancelClient) return;
+    await cancelReservation(RAFFLE_ID, cancelClient.numbers);
+    setCancelClient(null);
   };
 
   const openEditModal = (client) => {
@@ -179,6 +186,41 @@ const Admin = () => {
         </div>
       )}
 
+      {/* Cancel Modal Override */}
+      {cancelClient && (
+        <div style={modalOverlayStyle}>
+          <div style={modalContentStyle} className="animate-slide-up">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, color: '#FF3B30', fontSize: '1.2rem' }}>Cancelar Reserva?</h3>
+              <button onClick={() => setCancelClient(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999' }}>
+                <X size={24} />
+              </button>
+            </div>
+            
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: '24px', lineHeight: '1.5' }}>
+              Você está prestes a cancelar a compra de <strong>{cancelClient.name.split(' ')[0]}</strong> e liberar os números <strong>{cancelClient.numbers.join(', ')}</strong> para o público geral.
+            </p>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                className="btn" 
+                onClick={() => setCancelClient(null)}
+                style={{ flex: 1, background: '#F5F5F7', color: '#1D1D1F' }}
+              >
+                Voltar
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={confirmCancel}
+                style={{ flex: 1, background: '#FF3B30', boxShadow: '0 4px 15px rgba(255,59,48,0.3)' }}
+              >
+                Sim, Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="w-full max-w-4xl">
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
@@ -193,7 +235,7 @@ const Admin = () => {
         
         {/* Dashboard Arrecadação */}
         <h2 style={{ fontSize: '1.1rem', color: 'var(--text-muted)', marginBottom: '12px' }}>Dashboard</h2>
-        <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '12px', scrollbarWidth: 'none' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
           <div style={dashCardStyle}>
             <div style={dashTitleStyle}>Arrecadado</div>
             <div style={{...dashValueStyle, color: 'var(--primary-dark)'}}>R$ {totalRevenue.toFixed(2).replace('.', ',')}</div>

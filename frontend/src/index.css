@@ -23,6 +23,27 @@
   --shadow-hover: 0 14px 40px rgba(0, 0, 0, 0.08);
 }
 
+body.dark {
+  --primary-dark: #F5F5F7;
+  --accent: #FF6B81;
+  --accent-light: #3A1A20;
+  --accent-blue: #5AC8FA;
+  
+  --background: #000000;
+  --surface: rgba(30, 30, 30, 0.7);
+  --surface-solid: #1C1C1E;
+  
+  --text-main: #FFFFFF;
+  --text-muted: #A1A1A6;
+  
+  --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.3);
+  --shadow-hover: 0 14px 40px rgba(0, 0, 0, 0.5);
+}
+
+body.dark #root {
+  background: rgba(0,0,0,0.6);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -82,6 +103,11 @@ body {
   100% { transform: translateY(0px); }
 }
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 .animate-fade-in {
   animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -92,6 +118,14 @@ body {
 
 .animate-float {
   animation: floatY 4s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin 10s linear infinite;
+}
+
+.animate-spin-slower {
+  animation: spin 20s linear infinite;
 }
 
 /* Shared UI Components */

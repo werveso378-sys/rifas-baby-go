@@ -16,6 +16,7 @@ const Home = () => {
   
   // Checkout State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [confirmModal, setConfirmModal] = useState(false);
   const [name, setName] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [pixData, setPixData] = useState(null);
@@ -69,13 +70,32 @@ const Home = () => {
 
   const totalValue = selectedNumbers.length * PRECO;
 
-  const handleGeneratePix = async () => {
-    if (!name.trim() || !whatsapp.trim()) {
-      alert("Por favor, preencha seu nome e WhatsApp.");
+  const handleWhatsAppChange = (e) => {
+    let v = e.target.value.replace(/\D/g, '');
+    if (v.length > 11) v = v.slice(0, 11);
+    if (v.length > 2) v = `(${v.slice(0, 2)}) ${v.slice(2)}`;
+    if (v.length > 10) v = `${v.slice(0, 10)}-${v.slice(10)}`;
+    setWhatsapp(v);
+  };
+
+  const handleCheckoutClick = () => {
+    if (!name || !whatsapp) {
+      alert("Por favor, preencha nome e WhatsApp.");
       return;
     }
+    if (whatsapp.replace(/\D/g, '').length < 10) {
+      alert("Por favor, insira um WhatsApp válido com DDD.");
+      return;
+    }
+    setConfirmModal(true);
+  };
 
+  const confirmCheckout = async () => {
+    setConfirmModal(false);
     setLoading(true);
+    
+    setTimeLeft(300);
+
     try {
       const reserved = await reserveNumbers(RAFFLE_ID, selectedNumbers, { name, whatsapp });
       if (!reserved) {
@@ -95,7 +115,6 @@ const Home = () => {
 
       if (data.success || data.pix) {
         setPixData(data);
-        setTimeLeft(300); // Reset timer
       } else {
         alert("Erro ao gerar o Pix. Tente novamente.");
       }
@@ -127,7 +146,6 @@ const Home = () => {
 
   return (
     <div className="animate-fade-in w-full">
-      {/* Premium Hero Header */}
       <div style={heroStyle} className="animate-fade-in">
         <img 
           src="/banner.png" 
@@ -159,7 +177,6 @@ const Home = () => {
         </div>
       </div>
 
-      {/* Sticky Bottom Bar */}
       {selectedNumbers.length > 0 && (
         <div className="animate-slide-up" style={stickyBarStyle}>
           <div style={{ flex: 1 }}>
@@ -176,36 +193,50 @@ const Home = () => {
         </div>
       )}
 
-      {/* Checkout Modal (Bottom Sheet) */}
       <BottomSheetModal isOpen={isModalOpen} onClose={() => { if(!loading) setIsModalOpen(false); }}>
         {!pixData ? (
           <div className="animate-fade-in">
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '8px', color: 'var(--primary-dark)' }}>Finalizar Compra</h2>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>Preencha seus dados para gerar o Pix.</p>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
-              <input 
-                className="input-field" 
-                placeholder="Seu Nome Completo" 
-                value={name} 
-                onChange={e => setName(e.target.value)} 
-              />
-              <input 
-                className="input-field" 
-                placeholder="Seu WhatsApp" 
-                type="tel"
-                value={whatsapp} 
-                onChange={e => setWhatsapp(e.target.value)} 
-              />
-            </div>
+            {confirmModal ? (
+              <div className="text-center">
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '16px' }}>Confirmar Dados</h2>
+                <p style={{ marginBottom: '20px' }}>{name}, confirme sua reserva de {selectedNumbers.length} números por R$ {totalValue.toFixed(2).replace('.',',')}.</p>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button className="btn btn-secondary" onClick={() => setConfirmModal(false)}>Voltar</button>
+                  <button className="btn btn-primary" onClick={confirmCheckout}>Confirmar Reserva</button>
+                </div>
+              </div>
+            ) : (
+              <div className="animate-fade-in">
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '8px', color: 'var(--primary-dark)' }}>Finalizar Compra</h2>
+                <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>Preencha seus dados para gerar o Pix.</p>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+                  <input 
+                    className="input-field" 
+                    placeholder="Seu Nome Completo" 
+                    value={name} 
+                    onChange={e => setName(e.target.value)} 
+                  />
+                  <input 
+                    type="tel"
+                    className="input-field" 
+                    style={{ marginBottom: '24px' }}
+                    value={whatsapp} 
+                    onChange={handleWhatsAppChange} 
+                    placeholder="(11) 99999-9999"
+                    maxLength="15"
+                  />
+                </div>
 
-            <button 
-              className="btn btn-primary" 
-              onClick={handleGeneratePix}
-              disabled={loading || !name || !whatsapp}
-            >
-              {loading ? 'Processando...' : <><QrCode size={20} /> Gerar Pix de R$ {totalValue.toFixed(2).replace('.', ',')}</>}
-            </button>
+                <button 
+                  className="btn btn-primary" 
+                  onClick={handleCheckoutClick}
+                  disabled={loading}
+                >
+                  {loading ? 'Processando...' : <><QrCode size={20} /> Gerar Pix de R$ {totalValue.toFixed(2).replace('.', ',')}</>}
+                </button>
+              </div>
+            )}
           </div>
         ) : pixData.paid ? (
           <div className="animate-fade-in" style={{ textAlign: 'center' }}>
