@@ -5,8 +5,12 @@ const path = require('path');
 let db;
 
 try {
-  // Inicialização real com o Service Account fornecido
-  const serviceAccount = require(path.join(__dirname, '../config/serviceAccountKey.json'));
+  let serviceAccount;
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  } else {
+    serviceAccount = require(path.join(__dirname, '../config/serviceAccountKey.json'));
+  }
 
   initializeApp({
     credential: cert(serviceAccount)
