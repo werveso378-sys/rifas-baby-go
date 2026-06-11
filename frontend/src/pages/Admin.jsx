@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listenToNumbers, cancelReservation, updateReservation, eraseHistory } from '../services/firebaseService';
-import { playDing, playCashRegister } from '../services/soundService';
+import { playDing, playCashRegister, initAudio } from '../services/soundService';
 import { MessageCircle, Bell, Eye, EyeOff, ArrowLeft, Trash2, Edit2, X, Check, Clock } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://rifas-baby-go.onrender.com/api';
@@ -284,7 +284,7 @@ const Admin = () => {
   };
 
   return (
-    <div className="w-full animate-fade-in" style={{ padding: '0 12px 80px' }}>
+    <div className="w-full animate-fade-in" style={{ padding: '0 12px 80px' }} onClick={initAudio}>
 
       {/* Toast */}
       {toast && (

@@ -173,6 +173,25 @@ const Home = () => {
     }
   };
 
+  const handleSendReceipt = () => {
+    const valor = (selectedNumbers.length * PRECO).toFixed(2).replace('.', ',');
+    const nums = selectedNumbers.sort((a, b) => a - b).join(', ');
+    const dataAtual = new Date().toLocaleString('pt-BR');
+    
+    const lines = [
+      '✅ *Comprovante de Reserva - Rifa Baby*',
+      '',
+      `👤 *Nome:* ${name}`,
+      `🎫 *Números Pagos:* ${nums}`,
+      `💰 *Valor Total:* R$ ${valor}`,
+      `📅 *Data do Pagamento:* ${dataAtual}`,
+      '',
+      'Pagamento aprovado com sucesso! 🎉'
+    ];
+    
+    window.open(`https://wa.me/?text=${encodeURIComponent(lines.join('\n'))}`, '_blank');
+  };
+
   const handleCancel = async () => {
     if (window.confirm("Deseja realmente cancelar a reserva e liberar seus números para outras pessoas?")) {
       await cancelReservation(RAFFLE_ID, selectedNumbers);
@@ -314,9 +333,21 @@ const Home = () => {
             <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '1.1rem' }}>
               Parabéns, {name.split(' ')[0]}! Seus números ({selectedNumbers.join(', ')}) já estão garantidos e pagos.
             </p>
-            <button className="btn btn-primary" onClick={() => { setIsModalOpen(false); setPixData(null); setSelectedNumbers([]); }}>
-              Concluir <Check size={20} />
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button 
+                className="btn" 
+                onClick={handleSendReceipt} 
+                style={{ background: '#25D366', color: '#FFF', fontWeight: 'bold' }}
+              >
+                Enviar p/ meu WhatsApp
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={() => { setIsModalOpen(false); setPixData(null); setSelectedNumbers([]); }}
+              >
+                Concluir <Check size={20} />
+              </button>
+            </div>
           </div>
         ) : (
           <div className="animate-fade-in" style={{ textAlign: 'center' }}>

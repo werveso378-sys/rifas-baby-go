@@ -1,12 +1,24 @@
 // soundService.js — Gera sons via Web Audio API sem depender de URLs externas
 // Funciona em todos os navegadores modernos e PWAs.
 
-const getAudioContext = () => {
-  try {
-    return new (window.AudioContext || window.webkitAudioContext)();
-  } catch (e) {
-    return null;
+let globalAudioCtx = null;
+
+export const initAudio = () => {
+  if (!globalAudioCtx) {
+    try {
+      globalAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (e) {
+      console.warn('AudioContext not supported');
+    }
   }
+  if (globalAudioCtx && globalAudioCtx.state === 'suspended') {
+    globalAudioCtx.resume();
+  }
+};
+
+const getAudioContext = () => {
+  initAudio();
+  return globalAudioCtx;
 };
 
 /**
