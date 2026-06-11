@@ -10,39 +10,62 @@ const PRECO = 0.01;
 const Admin = () => {
   const navigate = useNavigate();
   const [numbersData, setNumbersData] = useState([]);
-  const [auth, setAuth] = useState(false);
+  const [auth, setAuth] = useState(() => localStorage.getItem('isAdminLoggedIn') === 'true');
   const [pass, setPass] = useState('');
   const [showPass, setShowPass] = useState(false);
   
-  const [toast, setToast] = useState(null);
-  const [prevCount, setPrevCount] = useState(0);
-
-  // Edit Modal State
-  const [editingClient, setEditingClient] = useState(null);
-  const [editName, setEditName] = useState('');
-  const [editWhatsApp, setEditWhatsApp] = useState('');
-
-  // Cancel Modal State
-  const [cancelClient, setCancelClient] = useState(null);
-
-  useEffect(() => {
-    if (!auth) return;
-    const unsubscribe = listenToNumbers(RAFFLE_ID, (data) => {
-      setNumbersData(data);
-    });
-    return () => unsubscribe();
-  }, [auth]);
+  const [prevPending, setPrevPending] = useState(0);
+  const [prevPaid, setPrevPaid] = useState(0);
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
 
   // Real-time Notification System
   useEffect(() => {
-    const resCount = numbersData.filter(n => n.status !== 'AVAILABLE').length;
-    if (resCount > prevCount && prevCount !== 0) {
-      const latest = numbersData.filter(n => n.status !== 'AVAILABLE').pop();
-      setToast(`🚨 Nova reserva feita por ${latest?.ownerName || 'alguém'}!`);
-      setTimeout(() => setToast(null), 5000);
+    const pendingCount = numbersData.filter(n => n.status === 'PENDING_PAYMENT').length;
+    const paidCount = numbersData.filter(n => n.status === 'PAID').length;
+
+    if (!isFirstLoad) {
+      if (pendingCount > prevPending) {
+        setToast(`🚨 Nova reserva (Pix gerado)!`);
+        setTimeout(() => setToast(null), 5000);
+        new Audio('https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg').play().catch(e=>console.log("Audio play blocked by browser"));
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('Nova Reserva!', { body: 'Um cliente gerou um Pix.', icon: '/banner.png' });
+        }
+      }
+      
+      if (paidCount > prevPaid) {
+        setToast(`💰 Pagamento Confirmado!`);
+        setTimeout(() => setToast(null), 8000);
+        new Audio('https://actions.google.com/sounds/v1/foley/cash_register_kaching.ogg').play().catch(e=>console.log("Audio play blocked"));
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('Pix Recebido!', { body: 'Uma reserva acabou de ser paga.', icon: '/banner.png' });
+        }
+      }
     }
-    if (numbersData.length > 0) setPrevCount(resCount);
-  }, [numbersData, prevCount]);
+
+    if (numbersData.length > 0) {
+      setIsFirstLoad(false);
+      setPrevPending(pendingCount);
+      setPrevPaid(paidCount);
+    }
+  }, [numbersData, prevPending, prevPaid, isFirstLoad]);
+
+  const handleLogin = () => {
+    if (pass === '253658Eb011125@') {
+      setAuth(true);
+      localStorage.setItem('isAdminLoggedIn', 'true');
+      if ('Notification' in window && Notification.permission !== 'granted') {
+        Notification.requestPermission();
+      }
+    } else {
+      alert('Senha incorreta!');
+    }
+  };
+
+  const handleLogout = () => {
+    setAuth(false);
+    localStorage.removeItem('isAdminLoggedIn');
+  };
 
   if (!auth) {
     return (
@@ -75,7 +98,7 @@ const Admin = () => {
             </button>
           </div>
 
-          <button className="btn btn-primary" onClick={() => pass === '253658Eb011125@' ? setAuth(true) : alert('Senha incorreta!')}>
+          <button className="btn btn-primary" onClick={handleLogin}>
             Entrar no Painel
           </button>
         </GlassCard>
@@ -224,13 +247,21 @@ const Admin = () => {
       <div className="w-full max-w-4xl">
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button 
+              onClick={() => navigate('/')} 
+              style={{ background: 'var(--surface-solid)', border: '1px solid rgba(128,128,128,0.2)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--primary-dark)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <h1 style={{ color: 'var(--primary-dark)', margin: 0, fontSize: '1.4rem' }}>Painel</h1>
+          </div>
           <button 
-            onClick={() => navigate('/')} 
-            style={{ background: 'var(--surface-solid)', border: '1px solid rgba(128,128,128,0.2)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--primary-dark)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
+            onClick={handleLogout}
+            style={{ background: '#ffebee', color: '#d32f2f', border: 'none', padding: '6px 12px', borderRadius: '16px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}
           >
-            <ArrowLeft size={18} />
+            Sair
           </button>
-          <h1 style={{ color: 'var(--primary-dark)', margin: 0, fontSize: '1.4rem' }}>Painel do Organizador</h1>
         </div>
         
         {/* Dashboard Arrecadação */}
