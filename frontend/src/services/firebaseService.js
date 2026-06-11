@@ -56,12 +56,16 @@ export const reserveNumbers = async (raffleId, selectedNumbers, userInfo) => {
       }
 
       // Se passou na verificação, reserva todos
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + 5 * 60000).toISOString(); // +5 min
+      
       refs.forEach(ref => {
         transaction.set(ref, {
           status: "RESERVED",
           ownerName: userInfo.name,
           ownerWhatsApp: userInfo.whatsapp,
-          reservedAt: new Date().toISOString()
+          reservedAt: now.toISOString(),
+          expiresAt: expiresAt
         });
       });
 

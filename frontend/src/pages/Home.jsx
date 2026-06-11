@@ -19,6 +19,37 @@ const Home = () => {
   const [pixData, setPixData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
+
+  // Countdown Timer
+  useEffect(() => {
+    let timer;
+    if (pixData && !pixData.paid && timeLeft > 0) {
+      timer = setInterval(() => {
+        setTimeLeft(prev => prev - 1);
+      }, 1000);
+    } else if (timeLeft === 0 && pixData && !pixData.paid) {
+      alert("Tempo esgotado! Seus números voltaram a ficar disponíveis.");
+      setIsModalOpen(false);
+      setPixData(null);
+      setSelectedNumbers([]);
+      setTimeLeft(300);
+    }
+    return () => clearInterval(timer);
+  }, [pixData, timeLeft]);
+
+  // Real-time Payment Success Check
+  useEffect(() => {
+    if (pixData && !pixData.paid && selectedNumbers.length > 0) {
+      const allPaid = selectedNumbers.every(num => {
+        const data = numbersData.find(n => n.number === num);
+        return data && data.status === 'PAID';
+      });
+      if (allPaid) {
+        setPixData(prev => ({ ...prev, paid: true }));
+      }
+    }
+  }, [numbersData, pixData, selectedNumbers]);
 
   useEffect(() => {
     const unsubscribe = listenToNumbers(RAFFLE_ID, (data) => {
@@ -62,6 +93,7 @@ const Home = () => {
 
       if (data.success || data.pix) {
         setPixData(data);
+        setTimeLeft(300); // Reset timer
       } else {
         alert("Erro ao gerar o Pix. Tente novamente.");
       }
@@ -85,9 +117,12 @@ const Home = () => {
     <div className="animate-fade-in w-full">
       {/* Premium Hero Header */}
       <div style={heroStyle} className="animate-fade-in">
-        <div className="animate-float" style={{ marginBottom: '16px', color: 'var(--accent)' }}>
-          <Sparkles size={48} strokeWidth={1.5} />
-        </div>
+        <img 
+          src="/banner.png" 
+          alt="Urso Chá de Bebê" 
+          className="animate-float"
+          style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: '50%', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', marginBottom: '16px' }} 
+        />
         <h1 style={{ fontSize: '2.4rem', marginBottom: '8px', lineHeight: '1.1' }} className="text-gradient">
           Chá de Bebê
         </h1>
@@ -160,13 +195,31 @@ const Home = () => {
               {loading ? 'Processando...' : <><QrCode size={20} /> Gerar Pix de R$ {totalValue.toFixed(2).replace('.', ',')}</>}
             </button>
           </div>
+        ) : pixData.paid ? (
+          <div className="animate-fade-in" style={{ textAlign: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px', color: '#34C759' }}>
+              <CheckCircle size={64} />
+            </div>
+            <h2 style={{ fontSize: '1.8rem', marginBottom: '8px', color: 'var(--primary-dark)' }}>Pagamento Aprovado!</h2>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '1.1rem' }}>
+              Parabéns, {name.split(' ')[0]}! Seus números ({selectedNumbers.join(', ')}) já estão garantidos e pagos.
+            </p>
+            <button className="btn btn-primary" onClick={() => { setIsModalOpen(false); setPixData(null); setSelectedNumbers([]); }}>
+              Concluir <Check size={20} />
+            </button>
+          </div>
         ) : (
           <div className="animate-fade-in" style={{ textAlign: 'center' }}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px', color: 'var(--accent)' }}>
               <CheckCircle size={48} />
             </div>
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '8px', color: 'var(--primary-dark)' }}>Quase Lá, {name.split(' ')[0]}!</h2>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>Copie a chave abaixo ou escaneie o QR Code.</p>
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '4px', color: 'var(--primary-dark)' }}>Quase Lá, {name.split(' ')[0]}!</h2>
+            <div style={{ background: '#FFF0F2', padding: '6px 16px', borderRadius: '20px', display: 'inline-block', marginBottom: '20px' }}>
+              <span style={{ color: '#FF6B81', fontWeight: 'bold' }}>
+                Expira em: {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
+              </span>
+            </div>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '20px' }}>Copie a chave abaixo ou escaneie o QR Code.</p>
             
             {(pixData.qrCode || pixData.pix?.qr_code) && (
               <img 
@@ -203,10 +256,11 @@ const heroStyle = {
 const stickyBarStyle = {
   position: 'fixed',
   bottom: '85px',
-  left: '50%',
-  transform: 'translateX(-50%)',
-  width: 'calc(100% - 32px)',
+  left: '16px',
+  right: '16px',
+  width: 'auto',
   maxWidth: '468px',
+  margin: '0 auto',
   background: 'var(--surface-solid)',
   padding: '16px 20px',
   borderRadius: '24px',
