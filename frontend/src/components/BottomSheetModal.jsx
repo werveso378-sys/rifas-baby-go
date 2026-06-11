@@ -41,6 +41,8 @@ const sheetStyle = {
   padding: '24px 24px 40px',
   boxShadow: '0 -10px 40px rgba(0,0,0,0.1)',
   position: 'relative',
+  maxHeight: '85vh',
+  overflowY: 'auto',
 };
 
 const dragHandleStyle = {

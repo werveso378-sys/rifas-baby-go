@@ -1,27 +1,26 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  /* Premium Pastel/Neutral Palette */
-  --primary: #9BA4B5;
-  --primary-light: #F1F6F9;
-  --primary-dark: #394867;
-  --accent: #FFB6B9;
-  --accent-hover: #fa9ea2;
+  /* Premium Apple-like Pastel Palette */
+  --primary-dark: #1D1D1F; /* Apple dark gray */
+  --accent: #FF6B81;       /* Vibrant soft pink */
+  --accent-light: #FFE0E5;
+  --accent-blue: #5AC8FA;  /* Apple pastel blue */
   
-  --background: #fdfbf7;
-  --surface: rgba(255, 255, 255, 0.85);
+  --background: #F5F5F7;   /* Apple base background */
+  --surface: rgba(255, 255, 255, 0.7);
   --surface-solid: #ffffff;
   
-  --text-main: #212A3E;
-  --text-muted: #9BA4B5;
+  --text-main: #1D1D1F;
+  --text-muted: #86868B;
   
-  --border-radius-xl: 32px;
+  --border-radius-xl: 36px;
   --border-radius-lg: 24px;
-  --border-radius-md: 16px;
+  --border-radius-md: 18px;
   --border-radius-sm: 12px;
   
-  --shadow-soft: 0 10px 40px rgba(0, 0, 0, 0.05);
-  --shadow-hover: 0 15px 50px rgba(0, 0, 0, 0.08);
+  --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.04);
+  --shadow-hover: 0 14px 40px rgba(0, 0, 0, 0.08);
 }
 
 * {
@@ -31,13 +30,15 @@
 }
 
 body {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--background);
   color: var(--text-main);
   min-height: 100vh;
-  /* Soft gradient background */
-  background-image: radial-gradient(at 0% 0%, hsla(353,100%,86%,0.2) 0px, transparent 50%),
-                    radial-gradient(at 100% 0%, hsla(219,23%,65%,0.2) 0px, transparent 50%);
+  /* Premium Apple-like gradient background: Pastel Pink & Blue */
+  background-image: 
+    radial-gradient(circle at 10% 0%, rgba(255, 182, 193, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 90% 10%, rgba(173, 216, 230, 0.35) 0%, transparent 50%),
+    radial-gradient(circle at 50% 100%, rgba(255, 240, 245, 0.4) 0%, transparent 50%);
   background-attachment: fixed;
   display: flex;
   justify-content: center;
@@ -47,27 +48,26 @@ body {
 
 #root {
   width: 100%;
-  max-width: 500px; /* Mobile first approach centered */
+  max-width: 480px; /* Mobile first */
   margin: 0 auto;
   min-height: 100vh;
   position: relative;
-  box-shadow: 0 0 50px rgba(0,0,0,0.03);
-  background: rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.2);
 }
 
 /* Glassmorphism utility */
 .glass {
   background: var(--surface);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: var(--border-radius-lg);
   box-shadow: var(--shadow-soft);
 }
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(15px); }
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -76,33 +76,37 @@ body {
   to { transform: translateY(0); }
 }
 
-@keyframes pulse-soft {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.02); }
-  100% { transform: scale(1); }
+@keyframes floatY {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+  100% { transform: translateY(0px); }
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-slide-up {
-  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-float {
+  animation: floatY 4s ease-in-out infinite;
 }
 
 /* Shared UI Components */
 .input-field {
   width: 100%;
   padding: 16px;
-  border: 2px solid transparent;
+  border: 1.5px solid transparent;
   border-radius: var(--border-radius-sm);
-  background: var(--primary-light);
-  font-family: 'Outfit', sans-serif;
+  background: rgba(0,0,0,0.03);
+  font-family: inherit;
   font-size: 16px;
   font-weight: 500;
   color: var(--text-main);
   outline: none;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .input-field::placeholder {
@@ -110,9 +114,9 @@ body {
 }
 
 .input-field:focus {
-  border-color: var(--accent);
+  border-color: var(--accent-blue);
   background: #fff;
-  box-shadow: 0 0 0 4px rgba(255, 182, 185, 0.15);
+  box-shadow: 0 0 0 4px rgba(90, 200, 250, 0.15);
 }
 
 .btn {
@@ -120,7 +124,7 @@ body {
   padding: 16px;
   border: none;
   border-radius: var(--border-radius-lg);
-  font-family: 'Outfit', sans-serif;
+  font-family: inherit;
   font-weight: 600;
   font-size: 17px;
   cursor: pointer;
@@ -136,14 +140,13 @@ body {
 }
 
 .btn-primary {
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent) 0%, #FF8A9B 100%);
   color: #fff;
-  box-shadow: 0 4px 15px rgba(255, 182, 185, 0.4);
+  box-shadow: 0 4px 15px rgba(255, 107, 129, 0.3);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--accent-hover);
-  box-shadow: 0 6px 20px rgba(255, 182, 185, 0.5);
+  box-shadow: 0 8px 25px rgba(255, 107, 129, 0.4);
   transform: translateY(-2px);
 }
 
@@ -159,18 +162,18 @@ body {
 }
 
 .btn-secondary:hover {
-  background: #2b3752;
+  background: #000;
   transform: translateY(-2px);
 }
 
 /* Typography Helpers */
 h1, h2, h3 {
   font-weight: 700;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.8px;
 }
 
 .text-gradient {
-  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--accent) 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-blue) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }

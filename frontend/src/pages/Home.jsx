@@ -3,7 +3,7 @@ import { listenToNumbers, reserveNumbers } from '../services/firebaseService';
 import { generatePix } from '../services/paymentService';
 import NumberGrid from '../components/NumberGrid';
 import BottomSheetModal from '../components/BottomSheetModal';
-import { Copy, QrCode, CheckCircle, ChevronRight, Check } from 'lucide-react';
+import { Copy, QrCode, CheckCircle, ChevronRight, Check, Sparkles } from 'lucide-react';
 
 const PRECO = 0.01;
 const RAFFLE_ID = "baby_shower_01";
@@ -83,13 +83,17 @@ const Home = () => {
 
   return (
     <div className="animate-fade-in w-full">
-      {/* Banner Header */}
-      <div style={headerStyle}>
-        <img src="/banner.png" alt="Chá de Bebê" style={bannerImgStyle} />
-        <div style={headerContentStyle} className="glass">
-          <h1 style={{ fontSize: '1.8rem', marginBottom: '4px' }}>Chá de Bebê 🧸</h1>
-          <p style={{ color: 'var(--text-muted)' }}>Escolha seus números da sorte!</p>
+      {/* Premium Hero Header */}
+      <div style={heroStyle} className="animate-fade-in">
+        <div className="animate-float" style={{ marginBottom: '16px', color: 'var(--accent)' }}>
+          <Sparkles size={48} strokeWidth={1.5} />
         </div>
+        <h1 style={{ fontSize: '2.4rem', marginBottom: '8px', lineHeight: '1.1' }} className="text-gradient">
+          Chá de Bebê
+        </h1>
+        <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', maxWidth: '280px', margin: '0 auto 24px' }}>
+          Escolha o seu ponto da sorte e participe!
+        </p>
       </div>
 
       <div style={{ padding: '0 16px', marginTop: '20px' }}>
@@ -186,31 +190,14 @@ const Home = () => {
   );
 };
 
-const headerStyle = {
-  position: 'relative',
+const heroStyle = {
   width: '100%',
-  height: '240px',
-  marginBottom: '40px'
-};
-
-const bannerImgStyle = {
-  width: '100%',
-  height: '100%',
-  objectFit: 'cover',
-  borderBottomLeftRadius: '32px',
-  borderBottomRightRadius: '32px',
-  boxShadow: 'var(--shadow-soft)'
-};
-
-const headerContentStyle = {
-  position: 'absolute',
-  bottom: '-25px',
-  left: '50%',
-  transform: 'translateX(-50%)',
-  width: '85%',
-  padding: '16px',
+  padding: '60px 20px 40px',
   textAlign: 'center',
-  background: '#fff'
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
 };
 
 const stickyBarStyle = {
