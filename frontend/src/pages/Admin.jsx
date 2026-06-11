@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { listenToNumbers } from '../services/firebaseService';
-import { MessageCircle, Bell } from 'lucide-react';
+import { MessageCircle, Bell, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
 
 const RAFFLE_ID = "baby_shower_01";
 const PRECO = 0.01;
 
 const Admin = () => {
+  const navigate = useNavigate();
   const [numbersData, setNumbersData] = useState([]);
   const [auth, setAuth] = useState(false);
   const [pass, setPass] = useState('');
+  const [showPass, setShowPass] = useState(false);
   
   const [toast, setToast] = useState(null);
   const [prevCount, setPrevCount] = useState(0);
@@ -37,17 +40,34 @@ const Admin = () => {
   if (!auth) {
     return (
       <div className="w-full flex justify-center pb-20 animate-fade-in" style={{ marginTop: '50px', padding: '20px' }}>
-        <GlassCard className="w-full max-w-sm" style={{ textAlign: 'center' }}>
-          <h2 style={{ color: 'var(--primary-dark)', marginBottom: '10px' }}>Acesso Restrito</h2>
+        <GlassCard className="w-full max-w-sm" style={{ textAlign: 'center', position: 'relative' }}>
+          <button 
+            onClick={() => navigate('/')} 
+            style={{ position: 'absolute', top: '20px', left: '20px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+          >
+            <ArrowLeft size={24} />
+          </button>
+          <h2 style={{ color: 'var(--primary-dark)', marginBottom: '10px', marginTop: '20px' }}>Acesso Restrito</h2>
           <p style={{ color: 'var(--text-muted)' }}>Área do Organizador</p>
-          <input 
-            type="password" 
-            className="input-field" 
-            style={{ marginTop: '24px', marginBottom: '24px' }}
-            value={pass} 
-            onChange={e => setPass(e.target.value)} 
-            placeholder="Digite a senha"
-          />
+          
+          <div style={{ position: 'relative', marginTop: '24px', marginBottom: '24px' }}>
+            <input 
+              type={showPass ? "text" : "password"} 
+              className="input-field" 
+              style={{ paddingRight: '40px' }}
+              value={pass} 
+              onChange={e => setPass(e.target.value)} 
+              placeholder="Digite a senha"
+            />
+            <button 
+              type="button"
+              onClick={() => setShowPass(!showPass)}
+              style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#999' }}
+            >
+              {showPass ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
+
           <button className="btn btn-primary" onClick={() => pass === '253658Eb011125@' ? setAuth(true) : alert('Senha incorreta!')}>
             Entrar no Painel
           </button>
@@ -99,7 +119,15 @@ const Admin = () => {
       )}
 
       <div className="w-full max-w-4xl">
-        <h1 style={{ color: 'var(--primary-dark)', marginBottom: '24px' }}>Painel do Organizador</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+          <button 
+            onClick={() => navigate('/')} 
+            style={{ background: 'white', border: '1px solid #eee', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--primary-dark)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <h1 style={{ color: 'var(--primary-dark)', margin: 0 }}>Painel do Organizador</h1>
+        </div>
         
         {/* Cards de Resumo */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '32px' }}>
