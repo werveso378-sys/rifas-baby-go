@@ -69,8 +69,8 @@ const Admin = () => {
 
   if (!auth) {
     return (
-      <div className="w-full flex justify-center pb-20 animate-fade-in" style={{ marginTop: '50px', padding: '20px' }}>
-        <GlassCard className="w-full max-w-sm" style={{ textAlign: 'center', position: 'relative' }}>
+      <div className="animate-fade-in" style={{ display: 'flex', justifyContent: 'center', width: '100%', padding: '20px', marginTop: '40px' }}>
+        <div className="glass" style={{ width: '100%', maxWidth: '350px', textAlign: 'center', position: 'relative', padding: '30px 20px' }}>
           <button 
             onClick={() => navigate('/')} 
             style={{ position: 'absolute', top: '20px', left: '20px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
@@ -101,7 +101,7 @@ const Admin = () => {
           <button className="btn btn-primary" onClick={handleLogin}>
             Entrar no Painel
           </button>
-        </GlassCard>
+        </div>
       </div>
     );
   }
