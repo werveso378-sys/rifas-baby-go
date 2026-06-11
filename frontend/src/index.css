@@ -29,19 +29,19 @@ body.dark {
   --accent-light: #3A1A20;
   --accent-blue: #5AC8FA;
   
-  --background: #000000;
-  --surface: rgba(30, 30, 30, 0.7);
-  --surface-solid: #1C1C1E;
+  --background: #1C1C1E;
+  --surface: rgba(44, 44, 46, 0.8);
+  --surface-solid: #2C2C2E;
   
-  --text-main: #FFFFFF;
-  --text-muted: #A1A1A6;
+  --text-main: #E5E5EA;
+  --text-muted: #8E8E93;
   
-  --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.3);
-  --shadow-hover: 0 14px 40px rgba(0, 0, 0, 0.5);
+  --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.2);
+  --shadow-hover: 0 14px 40px rgba(0, 0, 0, 0.3);
 }
 
 body.dark #root {
-  background: rgba(0,0,0,0.6);
+  background: rgba(0,0,0,0.2);
 }
 
 * {

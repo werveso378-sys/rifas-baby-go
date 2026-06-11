@@ -226,7 +226,7 @@ const Admin = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
           <button 
             onClick={() => navigate('/')} 
-            style={{ background: 'white', border: '1px solid #eee', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--primary-dark)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
+            style={{ background: 'var(--surface-solid)', border: '1px solid rgba(128,128,128,0.2)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--primary-dark)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
           >
             <ArrowLeft size={18} />
           </button>
@@ -261,7 +261,7 @@ const Admin = () => {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {clients.map((client, idx) => (
-            <div key={idx} style={{ background: 'white', borderRadius: '16px', padding: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.02)' }}>
+            <div key={idx} style={{ background: 'var(--surface-solid)', borderRadius: '16px', padding: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.04)', border: '1px solid rgba(128,128,128,0.05)' }}>
               
               {/* Header do Card */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
@@ -310,7 +310,7 @@ const Admin = () => {
           ))}
 
           {clients.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)', background: 'white', borderRadius: '16px' }}>
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)', background: 'var(--surface-solid)', borderRadius: '16px' }}>
               Nenhuma reserva registrada ainda.
             </div>
           )}
@@ -322,13 +322,13 @@ const Admin = () => {
 
 // Styles Extras para o Celular
 const dashCardStyle = {
-  background: 'white',
+  background: 'var(--surface-solid)',
   padding: '16px',
   borderRadius: '16px',
   boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
   minWidth: '130px',
   flexShrink: 0,
-  border: '1px solid rgba(0,0,0,0.02)'
+  border: '1px solid rgba(128,128,128,0.05)'
 };
 
 const dashTitleStyle = {
@@ -369,7 +369,7 @@ const modalOverlayStyle = {
 };
 
 const modalContentStyle = {
-  background: 'white',
+  background: 'var(--surface-solid)',
   width: '100%',
   maxWidth: '400px',
   padding: '24px',

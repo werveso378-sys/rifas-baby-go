@@ -162,7 +162,7 @@ const Home = () => {
       </div>
 
       <div style={{ padding: '0 16px', marginTop: '20px' }}>
-        <div className="glass" style={{ padding: '20px', background: '#fff' }}>
+        <div className="glass" style={{ padding: '20px', background: 'var(--surface-solid)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
             <h2 style={{ fontSize: '1.2rem', color: 'var(--primary-dark)' }}>Números</h2>
             <span style={{ fontWeight: 'bold', color: 'var(--accent)' }}>R$ {PRECO.toFixed(2).replace('.',',')}</span>
