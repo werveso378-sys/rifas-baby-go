@@ -99,3 +99,21 @@ export const cancelReservation = async (raffleId, selectedNumbers) => {
     return false;
   }
 };
+
+export const updateReservation = async (raffleId, selectedNumbers, newName, newWhatsApp) => {
+  try {
+    const batch = writeBatch(db);
+    selectedNumbers.forEach(n => {
+      const ref = doc(db, "raffles", raffleId, "numbers", String(n));
+      batch.update(ref, {
+        ownerName: newName,
+        ownerWhatsApp: newWhatsApp
+      });
+    });
+    await batch.commit();
+    return true;
+  } catch (error) {
+    console.error("Update failed: ", error);
+    return false;
+  }
+};
