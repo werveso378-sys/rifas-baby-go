@@ -95,13 +95,12 @@ const Home = () => {
   const confirmCheckout = async () => {
     setConfirmModal(false);
     setLoading(true);
-    
     setTimeLeft(300);
 
     try {
       const reserved = await reserveNumbers(RAFFLE_ID, selectedNumbers, { name, whatsapp });
       if (!reserved) {
-        alert("Alguns números já foram escolhidos! Tente novamente.");
+        alert('Alguns números já foram escolhidos! Tente novamente.');
         setLoading(false);
         setIsModalOpen(false);
         return;
@@ -115,13 +114,22 @@ const Home = () => {
         raffleId: RAFFLE_ID
       });
 
-      if (data.success || data.pix) {
-        setPixData(data);
+      // Normalise response from any backend format
+      if (data && (data.success || data.pix || data.qrCode || data.payload)) {
+        setPixData({
+          paid: false,
+          qrCode: data.qrCode || (data.pix && `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data.pix.qr_code || data.payload || '')}`) || null,
+          payload: data.payload || data.pix?.qr_code || '',
+          chargeId: data.chargeId || data.pix?.id || null,
+        });
       } else {
-        alert("Erro ao gerar o Pix. Tente novamente.");
+        await cancelReservation(RAFFLE_ID, selectedNumbers);
+        alert('Não foi possível gerar o Pix. Verifique sua conexão e tente novamente.');
       }
     } catch (error) {
-      alert("Erro de conexão.");
+      console.error('Erro ao gerar Pix:', error);
+      await cancelReservation(RAFFLE_ID, selectedNumbers).catch(() => {});
+      alert('Erro de conexão. Verifique seu sinal de internet e tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -207,8 +215,14 @@ const Home = () => {
         </div>
       </div>
 
-      <BottomSheetModal isOpen={isModalOpen} onClose={() => { if(!loading) setIsModalOpen(false); }}>
-        {!pixData ? (
+      <BottomSheetModal isOpen={isModalOpen} onClose={() => { if (!loading) { setIsModalOpen(false); } }}>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>⏳</div>
+            <h2 style={{ fontSize: '1.3rem', color: 'var(--primary-dark)', marginBottom: '8px' }}>Gerando seu Pix...</h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Aguarde, isso pode levar alguns segundos.</p>
+          </div>
+        ) : !pixData ? (
           <div className="animate-fade-in">
             {confirmModal ? (
               <div className="text-center">
