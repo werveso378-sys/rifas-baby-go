@@ -1,10 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listenToNumbers, cancelReservation, updateReservation } from '../services/firebaseService';
-import { MessageCircle, Bell, Eye, EyeOff, ArrowLeft, Trash2, Edit2, X, Check } from 'lucide-react';
+import { playDing, playCashRegister } from '../services/soundService';
+import { MessageCircle, Bell, Eye, EyeOff, ArrowLeft, Trash2, Edit2, X, Check, Clock } from 'lucide-react';
 
 const RAFFLE_ID = "baby_shower_01";
 const PRECO = 0.01;
+
+// Format seconds to MM:SS
+const formatTime = (seconds) => {
+  if (seconds <= 0) return '00:00';
+  const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+  const s = (seconds % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+};
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -13,6 +22,7 @@ const Admin = () => {
   const [pass, setPass] = useState('');
   const [adminUser, setAdminUser] = useState('');
   const [showPass, setShowPass] = useState(false);
+  const [now, setNow] = useState(Date.now());
 
   // Notification states
   const [toast, setToast] = useState(null);
@@ -25,6 +35,12 @@ const Admin = () => {
   const [editingClient, setEditingClient] = useState(null);
   const [editName, setEditName] = useState('');
   const [editWhatsApp, setEditWhatsApp] = useState('');
+
+  // Clock tick — updates every second to power the countdown timers
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Firebase listener — only when logged in
   useEffect(() => {
@@ -43,20 +59,14 @@ const Admin = () => {
 
     if (!isFirstLoad) {
       if (pendingCount > prevPending) {
-        setToast('🚨 Nova reserva (Pix gerado)!');
-        setTimeout(() => setToast(null), 5000);
-        new Audio('https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg').play().catch(() => {});
-        if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification('Nova Reserva!', { body: 'Um cliente gerou um Pix.', icon: '/banner.png' });
-        }
+        showToast('🚨 Nova reserva — Pix gerado!');
+        playDing();
+        sendBrowserNotification('Nova Reserva!', 'Um cliente gerou um Pix e está aguardando pagamento.');
       }
       if (paidCount > prevPaid) {
-        setToast('💰 Pagamento Confirmado!');
-        setTimeout(() => setToast(null), 8000);
-        new Audio('https://actions.google.com/sounds/v1/foley/cash_register_kaching.ogg').play().catch(() => {});
-        if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification('Pix Recebido!', { body: 'Uma reserva acabou de ser paga.', icon: '/banner.png' });
-        }
+        showToast('💰 Pagamento Confirmado!', 8000);
+        playCashRegister();
+        sendBrowserNotification('💰 Pix Recebido!', 'Uma reserva acabou de ser paga com sucesso!');
       }
     }
 
@@ -66,6 +76,17 @@ const Admin = () => {
       setPrevPaid(paidCount);
     }
   }, [numbersData, prevPending, prevPaid, isFirstLoad, auth]);
+
+  const showToast = (msg, duration = 5000) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), duration);
+  };
+
+  const sendBrowserNotification = (title, body) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(title, { body, icon: '/banner.png', badge: '/banner.png', vibrate: [200, 100, 200] });
+    }
+  };
 
   const handleLogin = () => {
     if (adminUser.trim().toLowerCase() === 'admin' && pass === '253658Eb011125@') {
@@ -84,62 +105,31 @@ const Admin = () => {
     localStorage.removeItem('isAdminLoggedIn');
   };
 
-  // ── LOGIN SCREEN ──
+  // ── LOGIN SCREEN ──────────────────────────────────────────────────────────────
   if (!auth) {
     return (
       <div className="animate-fade-in" style={{ display: 'flex', justifyContent: 'center', width: '100%', padding: '20px', marginTop: '60px' }}>
         <div className="glass" style={{ width: '100%', maxWidth: '350px', textAlign: 'center', position: 'relative', padding: '36px 24px' }}>
-          <button
-            onClick={() => navigate('/')}
-            style={{ position: 'absolute', top: '20px', left: '20px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
-          >
+          <button onClick={() => navigate('/')} style={{ position: 'absolute', top: '20px', left: '20px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
             <ArrowLeft size={24} />
           </button>
-
           <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🔐</div>
           <h2 style={{ color: 'var(--primary-dark)', marginBottom: '6px', fontSize: '1.4rem' }}>Acesso Restrito</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '28px' }}>Área do Organizador</p>
-
-          {/* Username */}
-          <input
-            type="text"
-            className="input-field"
-            style={{ marginBottom: '12px' }}
-            value={adminUser}
-            onChange={e => setAdminUser(e.target.value)}
-            placeholder="Usuário (admin)"
-            onKeyDown={e => e.key === 'Enter' && handleLogin()}
-          />
-
-          {/* Password */}
+          <input type="text" className="input-field" style={{ marginBottom: '12px' }} value={adminUser} onChange={e => setAdminUser(e.target.value)} placeholder="Usuário (admin)" onKeyDown={e => e.key === 'Enter' && handleLogin()} />
           <div style={{ position: 'relative', marginBottom: '24px' }}>
-            <input
-              type={showPass ? 'text' : 'password'}
-              className="input-field"
-              style={{ paddingRight: '44px' }}
-              value={pass}
-              onChange={e => setPass(e.target.value)}
-              placeholder="Senha"
-              onKeyDown={e => e.key === 'Enter' && handleLogin()}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPass(!showPass)}
-              style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#999' }}
-            >
+            <input type={showPass ? 'text' : 'password'} className="input-field" style={{ paddingRight: '44px' }} value={pass} onChange={e => setPass(e.target.value)} placeholder="Senha" onKeyDown={e => e.key === 'Enter' && handleLogin()} />
+            <button type="button" onClick={() => setShowPass(!showPass)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#999' }}>
               {showPass ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
-
-          <button className="btn btn-primary" onClick={handleLogin}>
-            Entrar no Painel
-          </button>
+          <button className="btn btn-primary" onClick={handleLogin}>Entrar no Painel</button>
         </div>
       </div>
     );
   }
 
-  // ── DASHBOARD ──
+  // ── DASHBOARD ─────────────────────────────────────────────────────────────────
   const totalNumbers = 100;
   const paidNumbers = numbersData.filter(n => n.status === 'PAID').length;
   const pendingNumbers = numbersData.filter(n => n.status === 'PENDING_PAYMENT' || n.status === 'RESERVED').length;
@@ -150,14 +140,23 @@ const Admin = () => {
   reservations.forEach(r => {
     const key = r.ownerWhatsApp || r.ownerName || r.number;
     if (!grouped[key]) {
-      grouped[key] = { name: r.ownerName, whatsapp: r.ownerWhatsApp, numbers: [], status: 'PAID' };
+      grouped[key] = { name: r.ownerName, whatsapp: r.ownerWhatsApp, numbers: [], status: 'PAID', expiresAt: null };
     }
     grouped[key].numbers.push(r.number);
     if (r.status === 'PENDING_PAYMENT' || r.status === 'RESERVED') {
       grouped[key].status = 'PENDING_PAYMENT';
+      // Use the latest expiresAt among the group
+      if (r.expiresAt && (!grouped[key].expiresAt || r.expiresAt > grouped[key].expiresAt)) {
+        grouped[key].expiresAt = r.expiresAt;
+      }
     }
   });
   const clients = Object.values(grouped).sort((a, b) => b.numbers.length - a.numbers.length);
+
+  const getSecondsLeft = (expiresAt) => {
+    if (!expiresAt) return 0;
+    return Math.max(0, Math.floor((new Date(expiresAt).getTime() - now) / 1000));
+  };
 
   const sendWhatsAppReminder = (client) => {
     const valor = (client.numbers.length * PRECO).toFixed(2).replace('.', ',');
@@ -183,8 +182,16 @@ const Admin = () => {
       '',
       'Obrigado e boa sorte! 🍀'
     ];
-    const text = lines.join('\n');
-    window.open(`https://wa.me/55${client.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`, '_blank');
+    window.open(`https://wa.me/55${client.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(lines.join('\n'))}`, '_blank');
+  };
+
+  const handleCancelClient = (client) => {
+    if (client.status === 'PAID') {
+      // Already paid — cannot simply cancel, must refund via MP
+      alert(`⚠️ ${client.name.split(' ')[0]} já realizou o pagamento!\n\nPara cancelar a compra, você precisa realizar o ESTORNO manualmente pelo painel do Mercado Pago:\n1. Acesse mercadopago.com.br\n2. Vá em "Sua atividade"\n3. Localize o pagamento e clique em "Estornar"\n\nApós o estorno, os números serão liberados.`);
+      return;
+    }
+    setCancelClient(client);
   };
 
   const confirmCancel = async () => {
@@ -241,11 +248,11 @@ const Admin = () => {
               <button onClick={() => setCancelClient(null)} style={iconBtnStyle}><X size={24} /></button>
             </div>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: '24px', lineHeight: '1.5' }}>
-              Você está prestes a cancelar a compra de <strong>{cancelClient.name?.split(' ')[0]}</strong> e liberar os números <strong>{cancelClient.numbers.join(', ')}</strong>.
+              Você está prestes a cancelar a reserva de <strong>{cancelClient.name?.split(' ')[0]}</strong> e liberar os números <strong>{cancelClient.numbers.join(', ')}</strong>. Isso não pode ser desfeito.
             </p>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button className="btn" onClick={() => setCancelClient(null)} style={{ flex: 1, background: '#F5F5F7', color: '#1D1D1F' }}>Voltar</button>
-              <button className="btn btn-primary" onClick={confirmCancel} style={{ flex: 1, background: '#FF3B30', boxShadow: '0 4px 15px rgba(255,59,48,0.3)' }}>Confirmar</button>
+              <button className="btn btn-primary" onClick={confirmCancel} style={{ flex: 1, background: '#FF3B30', boxShadow: '0 4px 15px rgba(255,59,48,0.3)' }}>Confirmar Cancelamento</button>
             </div>
           </div>
         </div>
@@ -273,36 +280,59 @@ const Admin = () => {
       {/* Client List */}
       <h2 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '12px' }}>Dados de Pessoas ({clients.length})</h2>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {clients.map((client, idx) => (
-          <div key={idx} style={{ background: 'var(--surface-solid)', borderRadius: '16px', padding: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.04)', border: '1px solid rgba(128,128,128,0.05)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-              <div>
-                <h3 style={{ margin: '0 0 4px 0', fontSize: '1rem', color: 'var(--primary-dark)' }}>{client.name}</h3>
-                <p style={{ margin: 0, fontSize: '0.83rem', color: 'var(--text-muted)' }}>{client.whatsapp}</p>
+        {clients.map((client, idx) => {
+          const secondsLeft = client.status === 'PENDING_PAYMENT' ? getSecondsLeft(client.expiresAt) : 0;
+          const isExpiring = secondsLeft > 0 && secondsLeft < 60;
+
+          return (
+            <div key={idx} style={{ background: 'var(--surface-solid)', borderRadius: '16px', padding: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.04)', border: `1px solid ${isExpiring ? 'rgba(255,59,48,0.3)' : 'rgba(128,128,128,0.05)'}` }}>
+              
+              {/* Header do Card */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                <div>
+                  <h3 style={{ margin: '0 0 4px 0', fontSize: '1rem', color: 'var(--primary-dark)' }}>{client.name}</h3>
+                  <p style={{ margin: 0, fontSize: '0.83rem', color: 'var(--text-muted)' }}>{client.whatsapp}</p>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                  <span style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 'bold', background: client.status === 'PAID' ? '#EAF8F1' : '#FFF5E5', color: client.status === 'PAID' ? '#34C759' : '#FF9500' }}>
+                    {client.status === 'PAID' ? '✅ PAGO' : '⏳ PENDENTE'}
+                  </span>
+                  {/* Countdown Timer — only for pending */}
+                  {client.status === 'PENDING_PAYMENT' && client.expiresAt && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: secondsLeft === 0 ? '#ffebee' : isExpiring ? '#FFF5E5' : 'rgba(0,0,0,0.04)', padding: '3px 8px', borderRadius: '12px' }}>
+                      <Clock size={11} color={secondsLeft === 0 ? '#FF3B30' : isExpiring ? '#FF9500' : '#999'} />
+                      <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: secondsLeft === 0 ? '#FF3B30' : isExpiring ? '#FF9500' : '#999' }}>
+                        {secondsLeft === 0 ? 'Expirado' : formatTime(secondsLeft)}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
-              <span style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 'bold', background: client.status === 'PAID' ? '#EAF8F1' : '#FFF5E5', color: client.status === 'PAID' ? '#34C759' : '#FF9500' }}>
-                {client.status === 'PAID' ? 'PAGO' : 'PENDENTE'}
-              </span>
-            </div>
-            <div style={{ background: 'rgba(0,0,0,0.02)', padding: '8px 12px', borderRadius: '10px', marginBottom: '14px' }}>
-              <p style={{ margin: '0 0 4px 0', fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>{client.numbers.length} número(s) • R$ {(client.numbers.length * PRECO).toFixed(2).replace('.', ',')}</p>
-              <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--accent-blue)', fontWeight: '600', wordWrap: 'break-word' }}>{client.numbers.sort((a, b) => a - b).join(', ')}</p>
-            </div>
-            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
-              {client.status === 'PENDING_PAYMENT' && (
-                <button onClick={() => sendWhatsAppReminder(client)} style={{ ...actionBtnStyle, background: '#EAF8F1', color: '#34C759' }}>
-                  <MessageCircle size={14} /> Lembrar
+
+              {/* Números */}
+              <div style={{ background: 'rgba(0,0,0,0.02)', padding: '8px 12px', borderRadius: '10px', marginBottom: '14px' }}>
+                <p style={{ margin: '0 0 4px 0', fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>{client.numbers.length} número(s) • R$ {(client.numbers.length * PRECO).toFixed(2).replace('.', ',')}</p>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--accent-blue)', fontWeight: '600', wordWrap: 'break-word' }}>{client.numbers.sort((a, b) => a - b).join(', ')}</p>
+              </div>
+
+              {/* Ações */}
+              <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+                {client.status === 'PENDING_PAYMENT' && (
+                  <button onClick={() => sendWhatsAppReminder(client)} style={{ ...actionBtnStyle, background: '#EAF8F1', color: '#34C759' }}>
+                    <MessageCircle size={14} /> Lembrar
+                  </button>
+                )}
+                <button onClick={() => openEditModal(client)} style={{ ...actionBtnStyle, background: '#F0F4FF', color: '#007AFF' }}>
+                  <Edit2 size={14} /> Editar
                 </button>
-              )}
-              <button onClick={() => openEditModal(client)} style={{ ...actionBtnStyle, background: '#F0F4FF', color: '#007AFF' }}>
-                <Edit2 size={14} /> Editar
-              </button>
-              <button onClick={() => setCancelClient(client)} style={{ ...actionBtnStyle, background: '#FFF0F2', color: '#FF3B30' }}>
-                <Trash2 size={14} /> Cancelar
-              </button>
+                <button onClick={() => handleCancelClient(client)} style={{ ...actionBtnStyle, background: '#FFF0F2', color: '#FF3B30' }}>
+                  <Trash2 size={14} /> {client.status === 'PAID' ? 'Estornar' : 'Cancelar'}
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
+
         {clients.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)', background: 'var(--surface-solid)', borderRadius: '16px' }}>
             Nenhuma reserva registrada ainda.
