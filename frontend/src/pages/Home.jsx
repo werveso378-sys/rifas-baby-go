@@ -13,7 +13,8 @@ const Home = () => {
   const navigate = useNavigate();
   const [numbersData, setNumbersData] = useState([]);
   const [selectedNumbers, setSelectedNumbers] = useState([]);
-  const [secretClicks, setSecretClicks] = useState(0);
+  const [adminTaps, setAdminTaps] = useState(0);
+  const adminTapRef = React.useRef(null);
   
   // Checkout State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -145,14 +146,16 @@ const Home = () => {
     }
   };
 
-  const handleSecretAdmin = () => {
-    const newCount = secretClicks + 1;
-    setSecretClicks(newCount);
+  const handleAdminTap = () => {
+    const newCount = adminTaps + 1;
+    setAdminTaps(newCount);
+    if (adminTapRef.current) clearTimeout(adminTapRef.current);
     if (newCount >= 3) {
+      setAdminTaps(0);
       navigate('/admin');
-      setSecretClicks(0);
+      return;
     }
-    setTimeout(() => setSecretClicks(0), 1500);
+    adminTapRef.current = setTimeout(() => setAdminTaps(0), 1200);
   };
 
   return (
@@ -162,11 +165,10 @@ const Home = () => {
           src="/banner.png" 
           alt="Urso Chá de Bebê" 
           className="animate-float"
-          onClick={handleSecretAdmin}
-          style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: '50%', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', marginBottom: '16px', cursor: 'pointer' }} 
+          style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: '50%', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', marginBottom: '16px' }} 
         />
         <h1 style={{ fontSize: '2.4rem', marginBottom: '8px', lineHeight: '1.1' }} className="text-gradient">
-          Chá de Bebê
+          Chá de <span onClick={handleAdminTap} style={{ cursor: 'default' }}>Bebê</span>
         </h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', maxWidth: '280px', margin: '0 auto 10px' }}>
           Escolha o seu ponto da sorte e participe!
