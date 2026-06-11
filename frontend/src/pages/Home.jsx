@@ -8,6 +8,7 @@ import { Copy, QrCode, CheckCircle, ChevronRight, Check, Sparkles } from 'lucide
 
 const PRECO = 0.01;
 const RAFFLE_ID = "baby_shower_01";
+const API_URL = import.meta.env.VITE_API_URL || 'https://rifas-baby-go.onrender.com/api';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -62,6 +63,25 @@ const Home = () => {
     });
     return () => unsubscribe();
   }, []);
+
+  // ── Payment Polling Fallback ──────────────────────────────────────────────────
+  // If webhook fails (Render cold-start), frontend polls every 15s while Pix is open
+  useEffect(() => {
+    if (!pixData || pixData.paid || !pixData.chargeId) return;
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`${API_URL}/pix/check/${pixData.chargeId}`);
+        const data = await res.json();
+        if (data.approved) {
+          console.log('[Poll] Pagamento confirmado via polling!');
+          setPixData(prev => ({ ...prev, paid: true }));
+        }
+      } catch (e) {
+        console.warn('[Poll] Erro ao verificar:', e.message);
+      }
+    }, 15000); // Check every 15 seconds
+    return () => clearInterval(pollInterval);
+  }, [pixData]);
 
   const handleSelectNumber = (num) => {
     setSelectedNumbers(prev => {

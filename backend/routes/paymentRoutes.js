@@ -75,6 +75,49 @@ router.get('/push/vapid-key', (req, res) => {
   res.json({ publicKey: VAPID_PUBLIC });
 });
 
+// ── Route: Manual Payment Status Check (polling fallback) ─────────────────────
+// Called by frontend every 15s while Pix modal is open, and by admin "Verificar" button
+router.get('/pix/check/:paymentId', async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+    const paymentInfo = await mercadopagoService.getPaymentStatus(paymentId);
+    if (!paymentInfo) return res.json({ status: 'unknown' });
+
+    const status = paymentInfo.status; // 'pending', 'approved', 'rejected', etc.
+    console.log(`[Check] Payment ${paymentId} status: ${status}`);
+
+    if (status === 'approved') {
+      const txid = String(paymentId);
+      // Try to update Firebase (idempotent — safe to call multiple times)
+      const updated = await firebaseAdminService.updateNumberStatusByTxid('baby_shower_01', txid, 'PAID');
+      if (!updated && paymentInfo.external_reference) {
+        try {
+          const ref = JSON.parse(paymentInfo.external_reference);
+          if (ref.raffleId && Array.isArray(ref.numbers)) {
+            const batch = firebaseAdminService.db.batch();
+            for (const num of ref.numbers) {
+              const docRef = firebaseAdminService.db.collection('raffles').doc(ref.raffleId).collection('numbers').doc(String(num));
+              batch.update(docRef, { status: 'PAID', paidAt: new Date().toISOString() });
+            }
+            await batch.commit();
+            console.log(`[Check] Fallback PAID update for ${ref.numbers.length} numbers`);
+          }
+        } catch (e) { console.error('[Check] Fallback error:', e.message); }
+      }
+      // Also send push notification
+      await sendPushToAdmin('💰 Pix Recebido!', 'Pagamento aprovado! Número confirmado.', 'pagamento-confirmado');
+    }
+
+    res.json({ status, approved: status === 'approved' });
+  } catch (err) {
+    console.error('[Check] Error:', err.message);
+    res.json({ status: 'error' });
+  }
+});
+
+// ── Route: Keep-alive ping ─────────────────────────────────────────────────────
+router.get('/ping', (req, res) => res.json({ ok: true, ts: Date.now() }));
+
 // ── PIX Routes (unchanged) ────────────────────────────────────────────────────
 router.post('/pix/create', async (req, res) => {
   try {

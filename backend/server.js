@@ -51,4 +51,17 @@ setInterval(async () => {
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+
+  // ── Keep-alive: ping self every 10 minutes to prevent Render free-tier sleep ──
+  // Render sleeps after ~15min of inactivity, causing webhook cold-start failures
+  const SELF_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+  setInterval(async () => {
+    try {
+      const res = await fetch(`${SELF_URL}/api/ping`);
+      const data = await res.json();
+      console.log(`[Keep-alive] Ping OK — ${new Date(data.ts).toISOString()}`);
+    } catch (e) {
+      console.warn(`[Keep-alive] Ping falhou: ${e.message}`);
+    }
+  }, 10 * 60 * 1000); // every 10 minutes
 });

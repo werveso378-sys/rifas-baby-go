@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import { Sun, Moon } from 'lucide-react';
 import Home from './pages/Home';
 import Admin from './pages/Admin';
@@ -11,17 +11,13 @@ function AppInner() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Restore theme
+    // Restore theme only
     const saved = localStorage.getItem('theme');
     if (saved === 'dark') {
       setIsDark(true);
       document.body.classList.add('dark');
     }
-    // If admin is already logged in, go straight to admin panel
-    if (localStorage.getItem('isAdminLoggedIn') === 'true') {
-      navigate('/admin', { replace: true });
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleTheme = () => {
     if (isDark) {
@@ -56,7 +52,11 @@ function AppInner() {
 
       <main style={{ paddingBottom: '100px', paddingTop: '20px' }}>
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={
+            localStorage.getItem('isAdminLoggedIn') === 'true'
+              ? <Navigate to="/admin" replace />
+              : <Home />
+          } />
           <Route path="/admin" element={<Admin />} />
         </Routes>
       </main>

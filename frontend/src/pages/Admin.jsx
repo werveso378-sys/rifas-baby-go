@@ -228,6 +228,28 @@ const Admin = () => {
     setCancelClient(client);
   };
 
+  const verifyPayment = async (client) => {
+    // Find the transactionId from numbersData for this client
+    const numData = numbersData.find(n => client.numbers.includes(n.number) && n.transactionId);
+    const txid = numData?.transactionId;
+    if (!txid) {
+      alert('ID da transação não encontrado. O Pix pode não ter sido gerado ainda.');
+      return;
+    }
+    showToast('🔍 Verificando pagamento...');
+    try {
+      const res = await fetch(`${API_URL}/pix/check/${txid}`);
+      const data = await res.json();
+      if (data.approved) {
+        showToast('✅ Pagamento confirmado! Números atualizados.', 6000);
+      } else {
+        showToast(`⚠️ Status: ${data.status || 'pendente'}. Não confirmado ainda.`, 5000);
+      }
+    } catch (e) {
+      showToast('Erro ao verificar. Tente novamente.', 4000);
+    }
+  };
+
   const confirmCancel = async () => {
     if (!cancelClient) return;
     await cancelReservation(RAFFLE_ID, cancelClient.numbers);
@@ -354,6 +376,11 @@ const Admin = () => {
                 {client.status === 'PENDING_PAYMENT' && (
                   <button onClick={() => sendWhatsAppReminder(client)} style={{ ...actionBtnStyle, background: '#EAF8F1', color: '#34C759' }}>
                     <MessageCircle size={14} /> Lembrar
+                  </button>
+                )}
+                {client.status === 'PENDING_PAYMENT' && (
+                  <button onClick={() => verifyPayment(client)} style={{ ...actionBtnStyle, background: '#F0F8FF', color: '#007AFF', border: '1px solid #007AFF' }}>
+                    🔍 Verificar
                   </button>
                 )}
                 <button onClick={() => openEditModal(client)} style={{ ...actionBtnStyle, background: '#F0F4FF', color: '#007AFF' }}>
