@@ -4,6 +4,36 @@ import { listenToNumbers, cancelReservation, updateReservation } from '../servic
 import { playDing, playCashRegister } from '../services/soundService';
 import { MessageCircle, Bell, Eye, EyeOff, ArrowLeft, Trash2, Edit2, X, Check, Clock } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'https://rifas-baby-go.onrender.com/api';
+const VAPID_PUBLIC = 'BLqLhw2gqsuw7dX15HJmL9mx652r3FBViKcbjTYsvPf1BNGOiORuW8mAeoQHnb9d0h3ZB0XacxfriFq-FHm6FPY';
+
+const urlBase64ToUint8Array = (base64String) => {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+};
+
+const subscribeToPush = async () => {
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    const reg = await navigator.serviceWorker.ready;
+    const existing = await reg.pushManager.getSubscription();
+    const sub = existing || await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC)
+    });
+    await fetch(`${API_URL}/push/subscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscription: sub.toJSON() })
+    });
+    console.log('[Push] Assinatura registrada com sucesso!');
+  } catch (e) {
+    console.warn('[Push] Falha ao registrar assinatura:', e.message);
+  }
+};
+
 const RAFFLE_ID = "baby_shower_01";
 const PRECO = 0.01;
 
@@ -93,7 +123,11 @@ const Admin = () => {
       setAuth(true);
       localStorage.setItem('isAdminLoggedIn', 'true');
       if ('Notification' in window && Notification.permission !== 'granted') {
-        Notification.requestPermission();
+        Notification.requestPermission().then(permission => {
+          if (permission === 'granted') subscribeToPush();
+        });
+      } else if ('Notification' in window && Notification.permission === 'granted') {
+        subscribeToPush();
       }
     } else {
       alert('Usuário ou senha incorretos!');
