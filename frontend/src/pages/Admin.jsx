@@ -59,6 +59,7 @@ const Admin = () => {
   const [prevPending, setPrevPending] = useState(0);
   const [prevPaid, setPrevPaid] = useState(0);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
+  const [notifPermission, setNotifPermission] = useState(Notification.permission);
 
   // Modal states
   const [cancelClient, setCancelClient] = useState(null);
@@ -105,7 +106,7 @@ const Admin = () => {
       setPrevPending(pendingCount);
       setPrevPaid(paidCount);
     }
-  }, [numbersData, prevPending, prevPaid, isFirstLoad, auth]);
+  }, [numbersData, auth, isFirstLoad, prevPending, prevPaid]);
 
   const showToast = (msg, duration = 5000) => {
     setToast(msg);
@@ -124,6 +125,7 @@ const Admin = () => {
       localStorage.setItem('isAdminLoggedIn', 'true');
       if ('Notification' in window && Notification.permission !== 'granted') {
         Notification.requestPermission().then(permission => {
+          setNotifPermission(permission);
           if (permission === 'granted') subscribeToPush();
         });
       } else if ('Notification' in window && Notification.permission === 'granted') {
@@ -327,16 +329,27 @@ const Admin = () => {
         </div>
       )}
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', paddingTop: '12px' }}>
-        <button onClick={() => navigate('/')} style={{ background: 'var(--surface-solid)', border: '1px solid rgba(128,128,128,0.2)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--primary-dark)' }}>
-          <ArrowLeft size={18} />
-        </button>
-        <h1 style={{ color: 'var(--primary-dark)', margin: 0, fontSize: '1.4rem', flex: 1 }}>Painel</h1>
-        <button onClick={handleLogout} style={{ background: '#ffebee', color: '#d32f2f', border: 'none', padding: '6px 14px', borderRadius: '16px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}>
-          Sair
-        </button>
-      </div>
+      <div style={{ maxWidth: '400px', width: '100%', paddingBottom: '30px' }}>
+          
+          {/* Top Navbar */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', paddingTop: '12px' }}>
+            <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: 'var(--text-color)', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '1.2rem', fontWeight: 'bold' }}>
+              <ArrowLeft size={24} /> Painel
+            </button>
+            <button onClick={handleLogout} style={{ background: '#FFF0F2', color: '#FF3B30', border: 'none', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' }}>
+              Sair
+            </button>
+          </div>
+
+          {/* Notification Warning Banner */}
+          {notifPermission === 'denied' && (
+            <div style={{ background: '#FFF0F2', border: '1px solid #FF3B30', color: '#FF3B30', padding: '12px', borderRadius: '12px', marginBottom: '20px', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold' }}>
+                <Bell size={18} /> Notificações Bloqueadas!
+              </div>
+              <span>O seu navegador bloqueou os alertas de pagamento. Clique no ícone de <b>Cadeado</b> (ou configurações) na barra de endereços lá em cima e mude "Notificações" para <b>Permitir</b>.</span>
+            </div>
+          )}
 
       {/* Dashboard Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '24px' }}>
@@ -419,6 +432,7 @@ const Admin = () => {
             Nenhuma reserva registrada ainda.
           </div>
         )}
+      </div>
       </div>
     </div>
   );
