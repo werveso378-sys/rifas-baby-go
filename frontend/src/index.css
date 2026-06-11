@@ -61,9 +61,6 @@ body {
     radial-gradient(circle at 90% 10%, rgba(173, 216, 230, 0.35) 0%, transparent 50%),
     radial-gradient(circle at 50% 100%, rgba(255, 240, 245, 0.4) 0%, transparent 50%);
   background-attachment: fixed;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
   -webkit-font-smoothing: antialiased;
   touch-action: manipulation; /* Prevents double-tap zoom on mobile */
   user-select: none; /* Prevents accidental text selection making it feel like an app */

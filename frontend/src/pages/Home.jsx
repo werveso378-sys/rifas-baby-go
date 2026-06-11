@@ -199,8 +199,15 @@ const Home = () => {
             {confirmModal ? (
               <div className="text-center">
                 <h2 style={{ fontSize: '1.5rem', marginBottom: '16px' }}>Confirmar Dados</h2>
-                <p style={{ marginBottom: '20px' }}>{name}, confirme sua reserva de {selectedNumbers.length} números por R$ {totalValue.toFixed(2).replace('.',',')}.</p>
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <p style={{ marginBottom: '20px' }}>{name}, Você está prestes a gerar o Pix para reservar os números: <strong style={{ color: 'var(--accent-blue)' }}>{selectedNumbers.sort((a,b)=>a-b).join(', ')}</strong>.
+          </p>
+          
+          <div style={{ background: 'var(--background)', padding: '12px', borderRadius: '12px', marginBottom: '20px', textAlign: 'left' }}>
+            <p style={{ margin: '0 0 4px 0', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Nome: <strong style={{ color: 'var(--text-main)' }}>{name}</strong></p>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>WhatsApp: <strong style={{ color: 'var(--text-main)' }}>{whatsapp}</strong></p>
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px' }}>
                   <button className="btn btn-secondary" onClick={() => setConfirmModal(false)}>Voltar</button>
                   <button className="btn btn-primary" onClick={confirmCheckout}>Confirmar Reserva</button>
                 </div>
