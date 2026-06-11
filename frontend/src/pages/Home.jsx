@@ -236,9 +236,11 @@ const Home = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h2 style={{ fontSize: '1.2rem', color: 'var(--primary-dark)', margin: 0 }}>Números</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <button onClick={() => navigate('/meus-numeros')} style={{ background: '#F0F4FF', color: '#007AFF', border: 'none', padding: '6px 14px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.85rem' }}>
-                Meus Números
-              </button>
+              {localStorage.getItem('clientSessionPhone') && (
+                <button onClick={() => navigate('/meus-numeros')} style={{ background: '#F0F4FF', color: '#007AFF', border: 'none', padding: '6px 14px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.85rem' }}>
+                  Meus Números
+                </button>
+              )}
               <span style={{ fontWeight: 'bold', color: 'var(--accent)' }}>R$ {PRECO.toFixed(2).replace('.',',')}</span>
             </div>
           </div>
@@ -418,6 +420,15 @@ const Home = () => {
           </div>
         )}
       </BottomSheetModal>
+
+      <footer style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+        <p>Rifas Baby Go &copy; {new Date().getFullYear()}</p>
+        {!localStorage.getItem('clientSessionPhone') && (
+          <button onClick={() => navigate('/meus-numeros')} style={{ background: 'none', border: 'none', color: '#999', textDecoration: 'underline', marginTop: '8px', cursor: 'pointer' }}>
+            Já fez uma reserva? Entre aqui
+          </button>
+        )}
+      </footer>
     </div>
   );
 };
