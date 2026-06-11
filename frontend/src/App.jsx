@@ -34,7 +34,7 @@ function App() {
       <button 
         onClick={toggleTheme} 
         style={{ 
-          position: 'absolute', top: '24px', right: '24px', zIndex: 9999, 
+          position: 'fixed', bottom: '24px', right: '24px', zIndex: 9999, 
           background: 'var(--surface)', border: '1px solid rgba(255,255,255,0.2)', 
           borderRadius: '50%', width: '48px', height: '48px', 
           display: 'flex', alignItems: 'center', justifyContent: 'center', 

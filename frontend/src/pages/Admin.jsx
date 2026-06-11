@@ -12,6 +12,7 @@ const Admin = () => {
   const [numbersData, setNumbersData] = useState([]);
   const [auth, setAuth] = useState(() => localStorage.getItem('isAdminLoggedIn') === 'true');
   const [pass, setPass] = useState('');
+  const [adminName, setAdminName] = useState('');
   const [showPass, setShowPass] = useState(false);
   
   const [prevPending, setPrevPending] = useState(0);
@@ -51,14 +52,14 @@ const Admin = () => {
   }, [numbersData, prevPending, prevPaid, isFirstLoad]);
 
   const handleLogin = () => {
-    if (pass === '253658Eb011125@') {
+    if (adminName.trim().toLowerCase() === 'admin' && pass === '253658Eb011125@') {
       setAuth(true);
       localStorage.setItem('isAdminLoggedIn', 'true');
       if ('Notification' in window && Notification.permission !== 'granted') {
         Notification.requestPermission();
       }
     } else {
-      alert('Senha incorreta!');
+      alert('Usuário ou senha incorretos!');
     }
   };
 
@@ -80,7 +81,18 @@ const Admin = () => {
           <h2 style={{ color: 'var(--primary-dark)', marginBottom: '10px', marginTop: '20px', fontSize: '1.4rem' }}>Acesso Restrito</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Área do Organizador</p>
           
-          <div style={{ position: 'relative', marginTop: '24px', marginBottom: '24px' }}>
+          <div style={{ position: 'relative', marginTop: '24px', marginBottom: '16px' }}>
+            <input 
+              type="text" 
+              className="input-field" 
+              style={{ fontSize: '0.95rem' }}
+              value={adminName} 
+              onChange={e => setAdminName(e.target.value)} 
+              placeholder="Usuário"
+            />
+          </div>
+
+          <div style={{ position: 'relative', marginBottom: '24px' }}>
             <input 
               type={showPass ? "text" : "password"} 
               className="input-field" 
