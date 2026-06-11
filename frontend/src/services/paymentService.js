@@ -5,7 +5,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://rifas-baby-go.onrender.
  */
 export const generatePix = async (paymentData) => {
   try {
-    const response = await fetch(`${API_URL}/pix/create`, {
+    const response = await fetch(`${API_URL}/pix/create-mp`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

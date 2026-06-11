@@ -4,6 +4,7 @@ const QRCode = require('qrcode');
 const { v4: uuidv4 } = require('uuid');
 const caktoService = require('../services/caktoService');
 const firebaseAdminService = require('../services/firebaseAdminService');
+const mercadopagoService = require('../services/mercadopagoService');
 
 // Rota para o frontend solicitar a geração de Pix
 router.post('/pix/create', async (req, res) => {
@@ -86,6 +87,65 @@ router.post('/webhooks/cakto', async (req, res) => {
   } catch (error) {
     console.error('Erro no Webhook da Cakto:', error);
     res.status(500).send('Webhook Error');
+  }
+});
+
+// ----------------------------------------------------------------------
+// INTEGRAÇÃO MERCADO PAGO
+// ----------------------------------------------------------------------
+
+router.post('/pix/create-mp', async (req, res) => {
+  try {
+    const { customerName, customerPhone, numbers, value, raffleId } = req.body;
+    
+    const pixData = await mercadopagoService.createPixPayment(value, customerName, customerPhone, raffleId, numbers);
+    
+    if (!pixData.success) {
+      return res.status(500).json({ success: false, error: 'Erro no Mercado Pago' });
+    }
+
+    const qrCodeImage = await QRCode.toDataURL(pixData.qr_code, { errorCorrectionLevel: 'M', margin: 1 });
+
+    const txid = String(pixData.id);
+    for (const num of numbers) {
+      await firebaseAdminService.updateNumberStatus(raffleId, num, 'PENDING_PAYMENT', txid);
+    }
+
+    res.json({
+      success: true,
+      chargeId: txid,
+      qrCode: qrCodeImage,
+      payload: pixData.qr_code
+    });
+  } catch (error) {
+    console.error('Erro /pix/create-mp:', error);
+    res.status(500).json({ success: false, error: 'Erro interno' });
+  }
+});
+
+router.post('/webhook/mercadopago', async (req, res) => {
+  try {
+    const { action, type, data } = req.body;
+    
+    // Mercado Pago envia type="payment" ou action="payment.updated" dependendo da versão
+    if (type === 'payment' || (action && action.includes('payment'))) {
+      const paymentId = data?.id;
+      if (paymentId) {
+        const paymentInfo = await mercadopagoService.getPaymentStatus(paymentId);
+        
+        if (paymentInfo && paymentInfo.status === 'approved') {
+          const txid = String(paymentId);
+          console.log(`[Webhook MP] Pagamento aprovado: ${txid}`);
+          // Atualizamos todos os números vinculados a esse ID para PAGO
+          await firebaseAdminService.updateNumberStatusByTxid('baby_shower_01', txid, 'PAID');
+        }
+      }
+    }
+    
+    res.status(200).send('OK');
+  } catch (error) {
+    console.error('Erro Webhook MP:', error);
+    res.status(500).send('Error');
   }
 });
 
