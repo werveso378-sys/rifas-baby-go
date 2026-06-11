@@ -13,6 +13,7 @@ const Home = () => {
   const navigate = useNavigate();
   const [numbersData, setNumbersData] = useState([]);
   const [selectedNumbers, setSelectedNumbers] = useState([]);
+  const [secretClicks, setSecretClicks] = useState(0);
   
   // Checkout State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -144,24 +145,35 @@ const Home = () => {
     }
   };
 
+  const handleSecretAdmin = () => {
+    const newCount = secretClicks + 1;
+    setSecretClicks(newCount);
+    if (newCount >= 3) {
+      navigate('/admin');
+      setSecretClicks(0);
+    }
+    setTimeout(() => setSecretClicks(0), 1500);
+  };
+
   return (
-    <div className="animate-fade-in w-full">
+    <div className="animate-fade-in w-full" style={{ paddingBottom: '40px' }}>
       <div style={heroStyle} className="animate-fade-in">
         <img 
           src="/banner.png" 
           alt="Urso Chá de Bebê" 
           className="animate-float"
-          style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: '50%', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', marginBottom: '16px' }} 
+          onClick={handleSecretAdmin}
+          style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: '50%', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', marginBottom: '16px', cursor: 'pointer' }} 
         />
         <h1 style={{ fontSize: '2.4rem', marginBottom: '8px', lineHeight: '1.1' }} className="text-gradient">
-          Chá de <span onDoubleClick={() => navigate('/admin')} style={{ cursor: 'default' }}>Bebê</span>
+          Chá de Bebê
         </h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', maxWidth: '280px', margin: '0 auto 24px' }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', maxWidth: '280px', margin: '0 auto 10px' }}>
           Escolha o seu ponto da sorte e participe!
         </p>
       </div>
 
-      <div style={{ padding: '0 16px', marginTop: '20px' }}>
+      <div style={{ padding: '0 16px', marginTop: '5px' }}>
         <div className="glass" style={{ padding: '20px', background: 'var(--surface-solid)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
             <h2 style={{ fontSize: '1.2rem', color: 'var(--primary-dark)' }}>Números</h2>
@@ -174,24 +186,24 @@ const Home = () => {
             selectedNumbers={selectedNumbers}
             onSelectNumber={handleSelectNumber}
           />
+
+          {selectedNumbers.length > 0 && (
+            <div className="animate-slide-up" style={{ marginTop: '20px', borderTop: '1px solid rgba(0,0,0,0.05)', paddingTop: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '2px' }}>
+                  {selectedNumbers.length} número(s)
+                </p>
+                <h3 style={{ fontSize: '1.4rem', color: 'var(--primary-dark)' }}>
+                  R$ {totalValue.toFixed(2).replace('.', ',')}
+                </h3>
+              </div>
+              <button className="btn btn-primary" style={{ width: 'auto', padding: '12px 20px' }} onClick={() => setIsModalOpen(true)}>
+                Continuar <ChevronRight size={18} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
-
-      {selectedNumbers.length > 0 && (
-        <div className="animate-slide-up" style={stickyBarStyle}>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '2px' }}>
-              {selectedNumbers.length} número(s) selecionado(s)
-            </p>
-            <h3 style={{ fontSize: '1.4rem', color: 'var(--primary-dark)' }}>
-              R$ {totalValue.toFixed(2).replace('.', ',')}
-            </h3>
-          </div>
-          <button className="btn btn-primary" style={{ width: 'auto', padding: '14px 24px' }} onClick={() => setIsModalOpen(true)}>
-            Continuar <ChevronRight size={18} />
-          </button>
-        </div>
-      )}
 
       <BottomSheetModal isOpen={isModalOpen} onClose={() => { if(!loading) setIsModalOpen(false); }}>
         {!pixData ? (
@@ -303,30 +315,12 @@ const Home = () => {
 
 const heroStyle = {
   width: '100%',
-  padding: '60px 20px 40px',
+  padding: '40px 20px 20px',
   textAlign: 'center',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
-};
-
-const stickyBarStyle = {
-  position: 'fixed',
-  bottom: '85px',
-  left: '16px',
-  right: '16px',
-  width: 'auto',
-  maxWidth: '468px',
-  margin: '0 auto',
-  background: 'var(--surface-solid)',
-  padding: '16px 20px',
-  borderRadius: '24px',
-  boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  zIndex: 90
 };
 
 export default Home;
