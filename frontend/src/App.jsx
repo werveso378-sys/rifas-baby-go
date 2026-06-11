@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, useNavigate, Navigate } from 'react-route
 import { Sun, Moon } from 'lucide-react';
 import Home from './pages/Home';
 import Admin from './pages/Admin';
+import ClientArea from './pages/ClientArea';
 import './index.css';
 
 // Separate component to use hooks inside BrowserRouter
@@ -57,6 +58,7 @@ function AppInner() {
               ? <Navigate to="/admin" replace />
               : <Home />
           } />
+          <Route path="/meus-numeros" element={<ClientArea />} />
           <Route path="/admin" element={<Admin />} />
         </Routes>
       </main>

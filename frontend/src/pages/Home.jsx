@@ -233,9 +233,14 @@ const Home = () => {
 
       <div style={{ padding: '0 16px', marginTop: '5px' }}>
         <div className="glass" style={{ padding: '20px', background: 'var(--surface-solid)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <h2 style={{ fontSize: '1.2rem', color: 'var(--primary-dark)' }}>Números</h2>
-            <span style={{ fontWeight: 'bold', color: 'var(--accent)' }}>R$ {PRECO.toFixed(2).replace('.',',')}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2 style={{ fontSize: '1.2rem', color: 'var(--primary-dark)', margin: 0 }}>Números</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button onClick={() => navigate('/meus-numeros')} style={{ background: '#F0F4FF', color: '#007AFF', border: 'none', padding: '6px 14px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.85rem' }}>
+                Meus Números
+              </button>
+              <span style={{ fontWeight: 'bold', color: 'var(--accent)' }}>R$ {PRECO.toFixed(2).replace('.',',')}</span>
+            </div>
           </div>
           
           <NumberGrid 
@@ -343,7 +348,14 @@ const Home = () => {
               </button>
               <button 
                 className="btn btn-primary" 
-                onClick={() => { setIsModalOpen(false); setPixData(null); setSelectedNumbers([]); }}
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setPixData(null);
+                  setSelectedNumbers([]);
+                  localStorage.setItem('clientSessionPhone', whatsapp.replace(/\D/g, ''));
+                  localStorage.setItem('clientName', name);
+                  navigate('/meus-numeros');
+                }}
               >
                 Concluir <Check size={20} />
               </button>

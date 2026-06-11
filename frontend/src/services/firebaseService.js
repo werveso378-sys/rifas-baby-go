@@ -135,3 +135,58 @@ export const updateReservation = async (raffleId, selectedNumbers, newName, newW
     return false;
   }
 };
+
+// ─── Autenticação de Cliente (Meus Números) ─────────────────────────────────
+
+export const getClientPassword = async (whatsapp) => {
+  try {
+    const cleanedPhone = whatsapp.replace(/\D/g, '');
+    const clientRef = doc(db, "clients", cleanedPhone);
+    const snap = await getDoc(clientRef);
+    if (snap.exists()) {
+      return snap.data().password;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error getting client password:", error);
+    return null;
+  }
+};
+
+export const setClientPassword = async (whatsapp, name, password) => {
+  try {
+    const cleanedPhone = whatsapp.replace(/\D/g, '');
+    const clientRef = doc(db, "clients", cleanedPhone);
+    await setDoc(clientRef, {
+      name,
+      whatsapp: cleanedPhone,
+      password,
+      createdAt: new Date().toISOString()
+    }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error setting client password:", error);
+    return false;
+  }
+};
+
+export const getClientNumbers = async (raffleId, whatsapp) => {
+  try {
+    const numbersRef = collection(db, "raffles", raffleId, "numbers");
+    // Fetch all, filter locally to avoid index creation for now
+    const snapshot = await getDocs(numbersRef);
+    const clientNumbers = [];
+    const cleanedQueryPhone = whatsapp.replace(/\D/g, '');
+    
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      if (data.status !== 'AVAILABLE' && data.ownerWhatsApp && data.ownerWhatsApp.replace(/\D/g, '') === cleanedQueryPhone) {
+        clientNumbers.push({ number: parseInt(doc.id), ...data });
+      }
+    });
+    return clientNumbers;
+  } catch (error) {
+    console.error("Error fetching client numbers:", error);
+    return [];
+  }
+};
