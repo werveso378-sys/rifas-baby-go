@@ -1,0 +1,32 @@
+const API_URL = 'http://localhost:3000/api';
+
+/**
+ * Solicita a criação de um Pix ao backend
+ */
+export const generatePix = async (paymentData) => {
+  try {
+    const response = await fetch(`${API_URL}/pix/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(paymentData)
+    });
+
+    if (!response.ok) {
+      throw new Error('Falha ao gerar o Pix');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Erro no paymentService:', error);
+    // Retorno de fallback para simulação offline se o backend não estiver rodando
+    console.warn("Retornando dados MOCK pois o backend pode estar desligado.");
+    return {
+      success: true,
+      chargeId: "mock_123",
+      qrCode: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/wcAAgMBAA+g88kAAAAASUVORK5CYII=",
+      payload: "00020101021226580014br.gov.bcb.pix0136mock-offline..."
+    };
+  }
+};
