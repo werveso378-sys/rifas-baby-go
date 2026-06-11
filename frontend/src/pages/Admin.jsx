@@ -174,15 +174,19 @@ const Admin = () => {
   reservations.forEach(r => {
     const key = r.ownerWhatsApp || r.ownerName || r.number;
     if (!grouped[key]) {
-      grouped[key] = { name: r.ownerName, whatsapp: r.ownerWhatsApp, numbers: [], status: 'PAID', expiresAt: null };
+      // Default to the first status encountered, or PAID if it's actually paid
+      grouped[key] = { name: r.ownerName, whatsapp: r.ownerWhatsApp, numbers: [], status: r.status, expiresAt: null };
     }
     grouped[key].numbers.push(r.number);
+    // Prioritize PENDING over other statuses so we know if they still owe money
     if (r.status === 'PENDING_PAYMENT' || r.status === 'RESERVED') {
       grouped[key].status = 'PENDING_PAYMENT';
-      // Use the latest expiresAt among the group
       if (r.expiresAt && (!grouped[key].expiresAt || r.expiresAt > grouped[key].expiresAt)) {
         grouped[key].expiresAt = r.expiresAt;
       }
+    } else if (r.status === 'PAID') {
+      // If we already have pending, keep pending. Otherwise upgrade to paid
+      if (grouped[key].status !== 'PENDING_PAYMENT') grouped[key].status = 'PAID';
     }
   });
   const clients = Object.values(grouped).sort((a, b) => b.numbers.length - a.numbers.length);
@@ -350,8 +354,8 @@ const Admin = () => {
                   <p style={{ margin: 0, fontSize: '0.83rem', color: 'var(--text-muted)' }}>{client.whatsapp}</p>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                  <span style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 'bold', background: client.status === 'PAID' ? '#EAF8F1' : '#FFF5E5', color: client.status === 'PAID' ? '#34C759' : '#FF9500' }}>
-                    {client.status === 'PAID' ? '✅ PAGO' : '⏳ PENDENTE'}
+                  <span style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 'bold', background: client.status === 'PAID' ? '#EAF8F1' : client.status === 'CANCELED' ? '#F2F2F7' : '#FFF5E5', color: client.status === 'PAID' ? '#34C759' : client.status === 'CANCELED' ? '#8E8E93' : '#FF9500' }}>
+                    {client.status === 'PAID' ? '✅ PAGO' : client.status === 'CANCELED' ? '❌ CANCELADO/EXPIRADO' : '⏳ PENDENTE'}
                   </span>
                   {/* Countdown Timer — only for pending */}
                   {client.status === 'PENDING_PAYMENT' && client.expiresAt && (
@@ -386,9 +390,11 @@ const Admin = () => {
                 <button onClick={() => openEditModal(client)} style={{ ...actionBtnStyle, background: '#F0F4FF', color: '#007AFF' }}>
                   <Edit2 size={14} /> Editar
                 </button>
-                <button onClick={() => handleCancelClient(client)} style={{ ...actionBtnStyle, background: '#FFF0F2', color: '#FF3B30' }}>
-                  <Trash2 size={14} /> {client.status === 'PAID' ? 'Estornar' : 'Cancelar'}
-                </button>
+                {client.status !== 'CANCELED' && (
+                  <button onClick={() => handleCancelClient(client)} style={{ ...actionBtnStyle, background: '#FFF0F2', color: '#FF3B30' }}>
+                    <Trash2 size={14} /> {client.status === 'PAID' ? 'Estornar' : 'Cancelar'}
+                  </button>
+                )}
               </div>
             </div>
           );

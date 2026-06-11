@@ -20,7 +20,7 @@ const NumberGrid = ({ totalNumbers = 100, numbersData, selectedNumbers, onSelect
             <div 
               key={num}
               onClick={() => {
-                if (status === 'AVAILABLE') {
+                if (status === 'AVAILABLE' || status === 'CANCELED') {
                   onSelectNumber(num);
                 }
               }}

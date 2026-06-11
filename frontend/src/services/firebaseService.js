@@ -50,7 +50,7 @@ export const reserveNumbers = async (raffleId, selectedNumbers, userInfo) => {
       
       // Verifica se algum número já foi reservado ou pago por outra pessoa
       for (const d of docs) {
-        if (d.exists() && d.data().status !== "AVAILABLE") {
+        if (d.exists() && d.data().status !== "AVAILABLE" && d.data().status !== "CANCELED") {
           throw new Error("Number already taken");
         }
       }
@@ -85,11 +85,9 @@ export const cancelReservation = async (raffleId, selectedNumbers) => {
     selectedNumbers.forEach(n => {
       const ref = doc(db, "raffles", raffleId, "numbers", String(n));
       batch.update(ref, {
-        status: "AVAILABLE",
-        ownerName: null,
-        ownerWhatsApp: null,
-        reservedAt: null,
-        expiresAt: null
+        status: "CANCELED",
+        isCanceled: true
+        // Note: ownerName and ownerWhatsApp are NOT cleared so Admin can still see them
       });
     });
     await batch.commit();

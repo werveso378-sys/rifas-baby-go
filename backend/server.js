@@ -33,12 +33,8 @@ setInterval(async () => {
       const batch = db.batch();
       snapshot.forEach(doc => {
         batch.update(doc.ref, {
-          status: 'AVAILABLE',
-          ownerName: null,
-          ownerWhatsApp: null,
-          reservedAt: null,
-          expiresAt: null,
-          transactionId: null
+          status: 'CANCELED',
+          isCanceled: true
         });
       });
       await batch.commit();
