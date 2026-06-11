@@ -175,9 +175,11 @@ const Admin = () => {
     const key = r.ownerWhatsApp || r.ownerName || r.number;
     if (!grouped[key]) {
       // Default to the first status encountered, or PAID if it's actually paid
-      grouped[key] = { name: r.ownerName, whatsapp: r.ownerWhatsApp, numbers: [], status: r.status, expiresAt: null };
+      grouped[key] = { name: r.ownerName, whatsapp: r.ownerWhatsApp, numbers: [], status: r.status, expiresAt: null, pixPayload: r.pixPayload };
     }
     grouped[key].numbers.push(r.number);
+    if (r.pixPayload) grouped[key].pixPayload = r.pixPayload; // Grab payload if any number has it
+
     // Prioritize PENDING over other statuses so we know if they still owe money
     if (r.status === 'PENDING_PAYMENT' || r.status === 'RESERVED') {
       grouped[key].status = 'PENDING_PAYMENT';
@@ -199,7 +201,7 @@ const Admin = () => {
   const sendWhatsAppReminder = (client) => {
     const valor = (client.numbers.length * PRECO).toFixed(2).replace('.', ',');
     const nums = client.numbers.sort((a, b) => a - b).join(', ');
-    const PIX_KEY = 'gabriellealmeidamascarenhas@gmail.com';
+    const PIX_KEY = client.pixPayload || 'gabriellealmeidamascarenhas@gmail.com'; // Fallback só por segurança
     const lines = [
       '🍼✨ *Chá de Bebê - Rifa*',
       '',
@@ -210,11 +212,11 @@ const Admin = () => {
       `🎫 *Número(s) reservado(s):* ${nums}`,
       `💰 *Valor total:* R$ ${valor}`,
       '',
-      '*Pague com Pix:*',
-      `🔑 *Chave Pix (e-mail):*`,
+      '*Pague com Pix Copia e Cola:*',
+      `👇 Copie o código longo abaixo:`,
       `${PIX_KEY}`,
       '',
-      'Copie a chave acima, abra seu banco, cole no campo Pix e confirme. Fácil assim! 😎',
+      'Abra seu banco, vá em "Pix Copia e Cola", cole o código e confirme. Fácil assim! 😎',
       '',
       '⚠️ Se não pagar em breve, os números voltam para outros participantes.',
       '',

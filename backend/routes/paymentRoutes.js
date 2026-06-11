@@ -165,7 +165,7 @@ router.post('/pix/create-mp', async (req, res) => {
     const qrCodeImage = await QRCode.toDataURL(pixData.qr_code, { errorCorrectionLevel: 'M', margin: 1 });
     const txid = String(pixData.id);
     for (const num of numbers) {
-      await firebaseAdminService.updateNumberStatus(raffleId, num, 'PENDING_PAYMENT', txid);
+      await firebaseAdminService.updateNumberStatus(raffleId, num, 'PENDING_PAYMENT', txid, pixData.qr_code);
     }
 
     // 🔔 Notify admin: new Pix generated

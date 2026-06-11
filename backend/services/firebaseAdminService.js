@@ -25,16 +25,19 @@ try {
 /**
  * Atualiza o status de um número na Rifa (Usado quando gerar o Pix e quando pagar)
  */
-async function updateNumberStatus(raffleId, number, status, transactionId) {
+async function updateNumberStatus(raffleId, number, status, transactionId, pixPayload = null) {
   try {
     const docRef = db.collection('raffles').doc(raffleId).collection('numbers').doc(String(number));
     
-    // Atualiza o documento (se ele já tiver sido reservado pelo Frontend, os dados do usuário já estarão lá)
-    await docRef.set({
+    const updateData = {
       status: status,
       transactionId: transactionId,
       updatedAt: FieldValue.serverTimestamp()
-    }, { merge: true });
+    };
+    if (pixPayload) updateData.pixPayload = pixPayload;
+
+    // Atualiza o documento (se ele já tiver sido reservado pelo Frontend, os dados do usuário já estarão lá)
+    await docRef.set(updateData, { merge: true });
 
     console.log(`Sucesso: Número ${number} atualizado para status ${status}`);
     return true;
