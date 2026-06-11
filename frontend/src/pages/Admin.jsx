@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { listenToNumbers, cancelReservation, updateReservation } from '../services/firebaseService';
+import { listenToNumbers, cancelReservation, updateReservation, eraseHistory } from '../services/firebaseService';
 import { playDing, playCashRegister } from '../services/soundService';
 import { MessageCircle, Bell, Eye, EyeOff, ArrowLeft, Trash2, Edit2, X, Check, Clock } from 'lucide-react';
 
@@ -258,6 +258,13 @@ const Admin = () => {
     if (!cancelClient) return;
     await cancelReservation(RAFFLE_ID, cancelClient.numbers);
     setCancelClient(null);
+    showToast('❌ Cancelado! Números liberados no site.');
+  };
+
+  const handleEraseHistory = async (client) => {
+    if (!window.confirm(`Deseja APAGAR o histórico de ${client.name.split(' ')[0]}?`)) return;
+    await eraseHistory(RAFFLE_ID, client.numbers);
+    showToast('🗑️ Histórico apagado.');
   };
 
   const openEditModal = (client) => {
@@ -393,6 +400,11 @@ const Admin = () => {
                 {client.status !== 'CANCELED' && (
                   <button onClick={() => handleCancelClient(client)} style={{ ...actionBtnStyle, background: '#FFF0F2', color: '#FF3B30' }}>
                     <Trash2 size={14} /> {client.status === 'PAID' ? 'Estornar' : 'Cancelar'}
+                  </button>
+                )}
+                {client.status === 'CANCELED' && (
+                  <button onClick={() => handleEraseHistory(client)} style={{ ...actionBtnStyle, background: '#FFF0F2', color: '#FF3B30' }}>
+                    <Trash2 size={14} /> Apagar
                   </button>
                 )}
               </div>

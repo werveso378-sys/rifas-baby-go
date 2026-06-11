@@ -98,6 +98,26 @@ export const cancelReservation = async (raffleId, selectedNumbers) => {
   }
 };
 
+export const eraseHistory = async (raffleId, selectedNumbers) => {
+  try {
+    const batch = writeBatch(db);
+    selectedNumbers.forEach(n => {
+      const ref = doc(db, "raffles", raffleId, "numbers", String(n));
+      batch.update(ref, {
+        ownerName: null,
+        ownerWhatsApp: null,
+        isCanceled: null,
+        status: "AVAILABLE"
+      });
+    });
+    await batch.commit();
+    return true;
+  } catch (error) {
+    console.error("Erase history failed: ", error);
+    return false;
+  }
+};
+
 export const updateReservation = async (raffleId, selectedNumbers, newName, newWhatsApp) => {
   try {
     const batch = writeBatch(db);

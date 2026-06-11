@@ -161,23 +161,15 @@ const Home = () => {
     try {
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(payload);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
       } else {
-        // Fallback for Android WebView / older browsers
-        const el = document.createElement('textarea');
-        el.value = payload;
-        el.style.position = 'fixed';
-        el.style.opacity = '0';
-        document.body.appendChild(el);
-        el.focus();
-        el.select();
-        document.execCommand('copy');
-        document.body.removeChild(el);
+        // Safe fallback without DOM injection that crashes WebViews
+        throw new Error('Clipboard API not available');
       }
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
     } catch (err) {
       console.error('Clipboard error:', err);
-      alert('Não foi possível copiar automaticamente. Segure o texto abaixo para copiar manualmente.');
+      alert('Seu navegador bloqueou a cópia automática. Por favor, segure o texto do código Pix abaixo para copiar manualmente.');
     }
   };
 
