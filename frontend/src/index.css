@@ -41,7 +41,7 @@ body.dark {
 }
 
 body.dark #root {
-  background: rgba(0,0,0,0.2);
+  background: transparent;
 }
 
 * {
@@ -65,6 +65,8 @@ body {
   justify-content: center;
   align-items: flex-start;
   -webkit-font-smoothing: antialiased;
+  touch-action: manipulation; /* Prevents double-tap zoom on mobile */
+  user-select: none; /* Prevents accidental text selection making it feel like an app */
 }
 
 #root {
@@ -73,7 +75,7 @@ body {
   margin: 0 auto;
   min-height: 100vh;
   position: relative;
-  background: rgba(255,255,255,0.2);
+  background: transparent;
 }
 
 /* Glassmorphism utility */
