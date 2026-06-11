@@ -48,7 +48,7 @@ const Admin = () => {
             onChange={e => setPass(e.target.value)} 
             placeholder="Digite a senha"
           />
-          <button className="btn btn-primary" onClick={() => pass === 'admin123' ? setAuth(true) : alert('Senha incorreta!')}>
+          <button className="btn btn-primary" onClick={() => pass === '253658Eb011125@' ? setAuth(true) : alert('Senha incorreta!')}>
             Entrar no Painel
           </button>
         </GlassCard>

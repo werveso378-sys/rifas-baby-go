@@ -78,3 +78,24 @@ export const reserveNumbers = async (raffleId, selectedNumbers, userInfo) => {
     return false;
   }
 };
+
+export const cancelReservation = async (raffleId, selectedNumbers) => {
+  try {
+    const batch = writeBatch(db);
+    selectedNumbers.forEach(n => {
+      const ref = doc(db, "raffles", raffleId, "numbers", String(n));
+      batch.update(ref, {
+        status: "AVAILABLE",
+        ownerName: null,
+        ownerWhatsApp: null,
+        reservedAt: null,
+        expiresAt: null
+      });
+    });
+    await batch.commit();
+    return true;
+  } catch (error) {
+    console.error("Cancel failed: ", error);
+    return false;
+  }
+};

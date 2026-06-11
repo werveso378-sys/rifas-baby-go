@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { listenToNumbers, reserveNumbers } from '../services/firebaseService';
+import { useNavigate } from 'react-router-dom';
+import { listenToNumbers, reserveNumbers, cancelReservation } from '../services/firebaseService';
 import { generatePix } from '../services/paymentService';
 import NumberGrid from '../components/NumberGrid';
 import BottomSheetModal from '../components/BottomSheetModal';
@@ -9,6 +10,7 @@ const PRECO = 0.01;
 const RAFFLE_ID = "baby_shower_01";
 
 const Home = () => {
+  const navigate = useNavigate();
   const [numbersData, setNumbersData] = useState([]);
   const [selectedNumbers, setSelectedNumbers] = useState([]);
   
@@ -113,6 +115,16 @@ const Home = () => {
     }
   };
 
+  const handleCancel = async () => {
+    if (window.confirm("Deseja realmente cancelar a reserva e liberar seus números para outras pessoas?")) {
+      await cancelReservation(RAFFLE_ID, selectedNumbers);
+      setIsModalOpen(false);
+      setPixData(null);
+      setSelectedNumbers([]);
+      setTimeLeft(300);
+    }
+  };
+
   return (
     <div className="animate-fade-in w-full">
       {/* Premium Hero Header */}
@@ -124,7 +136,7 @@ const Home = () => {
           style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: '50%', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', marginBottom: '16px' }} 
         />
         <h1 style={{ fontSize: '2.4rem', marginBottom: '8px', lineHeight: '1.1' }} className="text-gradient">
-          Chá de Bebê
+          Chá de <span onDoubleClick={() => navigate('/admin')} style={{ cursor: 'default' }}>Bebê</span>
         </h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', maxWidth: '280px', margin: '0 auto 24px' }}>
           Escolha o seu ponto da sorte e participe!
@@ -231,6 +243,14 @@ const Home = () => {
 
             <button className="btn btn-secondary" onClick={handleCopyPix} style={{ marginBottom: '12px' }}>
               {copied ? <><Check size={20} /> Copiado!</> : <><Copy size={20} /> Copiar Chave Pix</>}
+            </button>
+
+            <button 
+              className="btn btn-secondary" 
+              onClick={handleCancel} 
+              style={{ marginBottom: '12px', background: '#ffebee', color: '#d32f2f', border: 'none' }}
+            >
+              Cancelar Reserva
             </button>
 
             <p style={{ fontSize: '0.85rem', color: '#999', marginTop: '16px' }}>
