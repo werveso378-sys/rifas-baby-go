@@ -1,20 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { Sun, Moon } from 'lucide-react';
 import Home from './pages/Home';
 import Admin from './pages/Admin';
 import './index.css';
 
-function App() {
+// Separate component to use hooks inside BrowserRouter
+function AppInner() {
   const [isDark, setIsDark] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
+    // Restore theme
     const saved = localStorage.getItem('theme');
     if (saved === 'dark') {
       setIsDark(true);
       document.body.classList.add('dark');
     }
-  }, []);
+    // If admin is already logged in, go straight to admin panel
+    if (localStorage.getItem('isAdminLoggedIn') === 'true') {
+      navigate('/admin', { replace: true });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleTheme = () => {
     if (isDark) {
@@ -29,23 +36,22 @@ function App() {
   };
 
   return (
-    <BrowserRouter>
-      {/* Theme Toggle Button */}
-      <button 
-        onClick={toggleTheme} 
-        style={{ 
-          position: 'fixed', bottom: '24px', right: '24px', zIndex: 9999, 
-          background: 'var(--surface)', border: '1px solid rgba(255,255,255,0.2)', 
-          borderRadius: '50%', width: '48px', height: '48px', 
-          display: 'flex', alignItems: 'center', justifyContent: 'center', 
+    <>
+      {/* Theme Toggle Button — floating bottom right */}
+      <button
+        onClick={toggleTheme}
+        style={{
+          position: 'fixed', bottom: '24px', right: '24px', zIndex: 9999,
+          background: 'var(--surface)', border: '1px solid rgba(255,255,255,0.2)',
+          borderRadius: '50%', width: '48px', height: '48px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
           cursor: 'pointer', boxShadow: 'var(--shadow-soft)', backdropFilter: 'blur(10px)'
         }}
       >
-        {isDark ? (
-          <Moon size={24} className="animate-spin-slower" color="#5AC8FA" />
-        ) : (
-          <Sun size={24} className="animate-spin-slow" color="#FF9500" />
-        )}
+        {isDark
+          ? <Moon size={24} className="animate-spin-slower" color="#5AC8FA" />
+          : <Sun size={24} className="animate-spin-slow" color="#FF9500" />
+        }
       </button>
 
       <main style={{ paddingBottom: '100px', paddingTop: '20px' }}>
@@ -54,6 +60,14 @@ function App() {
           <Route path="/admin" element={<Admin />} />
         </Routes>
       </main>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppInner />
     </BrowserRouter>
   );
 }

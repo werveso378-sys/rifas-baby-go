@@ -160,7 +160,30 @@ const Admin = () => {
   const clients = Object.values(grouped).sort((a, b) => b.numbers.length - a.numbers.length);
 
   const sendWhatsAppReminder = (client) => {
-    const text = `Olá ${client.name.split(' ')[0]}! Tudo bem? Vi que você reservou os números (${client.numbers.join(', ')}) no nosso Chá de Bebê. O pagamento de R$ ${(client.numbers.length * PRECO).toFixed(2).replace('.', ',')} está pendente. Não perca sua vaga!`;
+    const valor = (client.numbers.length * PRECO).toFixed(2).replace('.', ',');
+    const nums = client.numbers.sort((a, b) => a - b).join(', ');
+    const PIX_KEY = 'gabriellealmeidamascarenhas@gmail.com';
+    const lines = [
+      '🍼✨ *Chá de Bebê - Rifa*',
+      '',
+      `Olá ${client.name.split(' ')[0]}! Tudo bem? 😊`,
+      '',
+      'Percebemos que você reservou os números abaixo mas o pagamento ainda não foi confirmado:',
+      '',
+      `🎫 *Número(s) reservado(s):* ${nums}`,
+      `💰 *Valor total:* R$ ${valor}`,
+      '',
+      '*Pague com Pix:*',
+      `🔑 *Chave Pix (e-mail):*`,
+      `${PIX_KEY}`,
+      '',
+      'Copie a chave acima, abra seu banco, cole no campo Pix e confirme. Fácil assim! 😎',
+      '',
+      '⚠️ Se não pagar em breve, os números voltam para outros participantes.',
+      '',
+      'Obrigado e boa sorte! 🍀'
+    ];
+    const text = lines.join('\n');
     window.open(`https://wa.me/55${client.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`, '_blank');
   };
 
