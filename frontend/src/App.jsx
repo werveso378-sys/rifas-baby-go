@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import { Sun, Moon } from 'lucide-react';
 import Home from './pages/Home';
 import Admin from './pages/Admin';
 import ClientArea from './pages/ClientArea';
+import { Capacitor } from '@capacitor/core';
 import './index.css';
 
 // Separate component to use hooks inside BrowserRouter
@@ -18,7 +19,12 @@ function AppInner() {
       setIsDark(true);
       document.body.classList.add('dark');
     }
-  }, []);
+
+    // Force Admin view on Native App
+    if (Capacitor.isNativePlatform()) {
+      navigate('/admin', { replace: true });
+    }
+  }, [navigate]);
 
   const toggleTheme = () => {
     if (isDark) {
@@ -68,9 +74,9 @@ function AppInner() {
 
 function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <AppInner />
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 

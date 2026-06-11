@@ -87,21 +87,32 @@ router.get('/pix/check/:paymentId', async (req, res) => {
     console.log(`[Check] Payment ${paymentId} status: ${status}`);
 
     if (status === 'approved') {
-      const txid = String(paymentId);
-      // Try to update Firebase (idempotent — safe to call multiple times)
-      const updated = await firebaseAdminService.updateNumberStatusByTxid('baby_shower_01', txid, 'PAID');
-      if (!updated && paymentInfo.external_reference) {
+      // Extract raffleId from external_reference if available
+      let raffleId = 'baby_shower_01';
+      let ref = null;
+      if (paymentInfo.external_reference) {
         try {
-          const ref = JSON.parse(paymentInfo.external_reference);
-          if (ref.raffleId && Array.isArray(ref.numbers)) {
-            const batch = firebaseAdminService.db.batch();
-            for (const num of ref.numbers) {
-              const docRef = firebaseAdminService.db.collection('raffles').doc(ref.raffleId).collection('numbers').doc(String(num));
-              batch.update(docRef, { status: 'PAID', paidAt: new Date().toISOString() });
-            }
-            await batch.commit();
-            console.log(`[Check] Fallback PAID update for ${ref.numbers.length} numbers`);
+          ref = JSON.parse(paymentInfo.external_reference);
+          if (ref.raffleId) raffleId = ref.raffleId;
+        } catch (e) {
+          console.error('[Check] Fallback parse error:', e.message);
+        }
+      }
+
+      // Try to update Firebase (idempotent — safe to call multiple times)
+      const txid = String(paymentId);
+      const updated = await firebaseAdminService.updateNumberStatusByTxid(raffleId, txid, 'PAID');
+      
+      // Fallback update individual numbers if batch by txid fails
+      if (!updated && ref && Array.isArray(ref.numbers)) {
+        try {
+          const batch = firebaseAdminService.db.batch();
+          for (const num of ref.numbers) {
+            const docRef = firebaseAdminService.db.collection('raffles').doc(raffleId).collection('numbers').doc(String(num));
+            batch.update(docRef, { status: 'PAID', paidAt: new Date().toISOString() });
           }
+          await batch.commit();
+          console.log(`[Check] Fallback PAID update for ${ref.numbers.length} numbers`);
         } catch (e) { console.error('[Check] Fallback error:', e.message); }
       }
       // Also send push notification
@@ -194,26 +205,33 @@ router.post('/webhook/mercadopago', async (req, res) => {
     console.log('[Webhook MP] Status:', paymentInfo?.status, '| Payer:', paymentInfo?.payer?.first_name);
 
     if (paymentInfo && paymentInfo.status === 'approved') {
-      const txid = String(paymentId);
-
-      // Strategy 1: by transactionId
-      const updated = await firebaseAdminService.updateNumberStatusByTxid('baby_shower_01', txid, 'PAID');
-
-      // Strategy 2: fallback via external_reference
-      if (!updated && paymentInfo.external_reference) {
+      let raffleId = 'baby_shower_01';
+      let ref = null;
+      if (paymentInfo.external_reference) {
         try {
-          const ref = JSON.parse(paymentInfo.external_reference);
-          if (ref.raffleId && Array.isArray(ref.numbers)) {
-            const batch = firebaseAdminService.db.batch();
-            for (const num of ref.numbers) {
-              const docRef = firebaseAdminService.db.collection('raffles').doc(ref.raffleId).collection('numbers').doc(String(num));
-              batch.update(docRef, { status: 'PAID', paidAt: new Date().toISOString() });
-            }
-            await batch.commit();
-            console.log(`[Webhook MP] ✅ Fallback: números marcados como PAID via external_reference`);
-          }
+          ref = JSON.parse(paymentInfo.external_reference);
+          if (ref.raffleId) raffleId = ref.raffleId;
         } catch (e) {
           console.error('[Webhook MP] Fallback parse error:', e.message);
+        }
+      }
+
+      // Strategy 1: by transactionId
+      const txid = String(paymentId);
+      const updated = await firebaseAdminService.updateNumberStatusByTxid(raffleId, txid, 'PAID');
+
+      // Strategy 2: fallback via external_reference
+      if (!updated && ref && Array.isArray(ref.numbers)) {
+        try {
+          const batch = firebaseAdminService.db.batch();
+          for (const num of ref.numbers) {
+            const docRef = firebaseAdminService.db.collection('raffles').doc(raffleId).collection('numbers').doc(String(num));
+            batch.update(docRef, { status: 'PAID', paidAt: new Date().toISOString() });
+          }
+          await batch.commit();
+          console.log(`[Webhook MP] ✅ Fallback: números marcados como PAID via external_reference`);
+        } catch (e) {
+          console.error('[Webhook MP] Fallback write error:', e.message);
         }
       }
 
@@ -224,6 +242,34 @@ router.post('/webhook/mercadopago', async (req, res) => {
     }
   } catch (error) {
     console.error('[Webhook MP] Erro:', error.message);
+  }
+});
+
+router.post('/pix/refund/:paymentId', async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+    const { raffleId, numbers } = req.body;
+
+    // Refund no Mercado Pago
+    const refundResult = await mercadopagoService.refundPayment(paymentId);
+    if (!refundResult.success) {
+      return res.status(500).json({ success: false, error: 'Erro ao estornar no Mercado Pago' });
+    }
+
+    // Cancelar reserva no Firebase
+    if (raffleId && numbers && Array.isArray(numbers)) {
+      const batch = firebaseAdminService.db.batch();
+      for (const num of numbers) {
+        const docRef = firebaseAdminService.db.collection('raffles').doc(raffleId).collection('numbers').doc(String(num));
+        batch.update(docRef, { status: 'CANCELED', isCanceled: true });
+      }
+      await batch.commit();
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erro /pix/refund:', error.message);
+    res.status(500).json({ success: false, error: 'Erro interno' });
   }
 });
 

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { listenToNumbers, cancelReservation, updateReservation, eraseHistory } from '../services/firebaseService';
+import { listenToNumbers, listenToRaffles, createRaffle, updateRaffle, cancelReservation, updateReservation, eraseHistory } from '../services/firebaseService';
+import { refundPayment } from '../services/paymentService';
 import { playDing, playCashRegister, initAudio } from '../services/soundService';
-import { MessageCircle, Bell, Eye, EyeOff, ArrowLeft, Trash2, Edit2, X, Check, Clock } from 'lucide-react';
+import { MessageCircle, Bell, Eye, EyeOff, ArrowLeft, Trash2, Edit2, X, Check, Clock, Plus, PauseCircle, PlayCircle, Settings, Search, Sun, Moon } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://rifas-baby-go.onrender.com/api';
 const VAPID_PUBLIC = 'BLqLhw2gqsuw7dX15HJmL9mx652r3FBViKcbjTYsvPf1BNGOiORuW8mAeoQHnb9d0h3ZB0XacxfriFq-FHm6FPY';
@@ -34,9 +35,6 @@ const subscribeToPush = async () => {
   }
 };
 
-const RAFFLE_ID = "baby_shower_01";
-const PRECO = 0.01;
-
 // Format seconds to MM:SS
 const formatTime = (seconds) => {
   if (seconds <= 0) return '00:00';
@@ -59,7 +57,7 @@ const Admin = () => {
   const [prevPending, setPrevPending] = useState(0);
   const [prevPaid, setPrevPaid] = useState(0);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
-  const [notifPermission, setNotifPermission] = useState(Notification.permission);
+  const [notifPermission, setNotifPermission] = useState(typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default');
 
   // Modal states
   const [cancelClient, setCancelClient] = useState(null);
@@ -73,14 +71,37 @@ const Admin = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Firebase listener — only when logged in
+  // Multi-Raffle States
+  const [raffles, setRaffles] = useState([]);
+  const [activeRaffleId, setActiveRaffleId] = useState('');
+  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard | manage
+
+  // Create Raffle States
+  const [newRaffle, setNewRaffle] = useState({ title: '', totalNumbers: 100, price: 0.01 });
+  const [isCreatingRaffle, setIsCreatingRaffle] = useState(false);
+
+  // Listen to all raffles
   useEffect(() => {
     if (!auth) return;
-    const unsubscribe = listenToNumbers(RAFFLE_ID, (data) => {
+    const unsubscribe = listenToRaffles((data) => {
+      setRaffles(data);
+      if (!activeRaffleId && data.length > 0) {
+        setActiveRaffleId(data[0].id);
+      }
+    });
+    return () => unsubscribe();
+  }, [auth, activeRaffleId]);
+
+  // Firebase listener for selected raffle numbers
+  useEffect(() => {
+    if (!auth || !activeRaffleId) return;
+    setNumbersData([]); // Reset when switching
+    setIsFirstLoad(true);
+    const unsubscribe = listenToNumbers(activeRaffleId, (data) => {
       setNumbersData(data);
     });
     return () => unsubscribe();
-  }, [auth]);
+  }, [auth, activeRaffleId]);
 
   // Real-time Notification System
   useEffect(() => {
@@ -165,8 +186,11 @@ const Admin = () => {
     );
   }
 
-  // ── DASHBOARD ─────────────────────────────────────────────────────────────────
-  const totalNumbers = 100;
+  // ── DASHBOARD CALCULATIONS ──────────────────────────────────────────────────
+  const currentRaffle = raffles.find(r => r.id === activeRaffleId) || { title: 'Carregando...', price: 0.01, totalNumbers: 100 };
+  const totalNumbers = currentRaffle.totalNumbers || 100;
+  const PRECO = currentRaffle.price || 0.01;
+
   const paidNumbers = numbersData.filter(n => n.status === 'PAID').length;
   const pendingNumbers = numbersData.filter(n => n.status === 'PENDING_PAYMENT' || n.status === 'RESERVED').length;
   const totalRevenue = paidNumbers * PRECO;
@@ -176,7 +200,6 @@ const Admin = () => {
   reservations.forEach(r => {
     const key = r.ownerWhatsApp || r.ownerName || r.number;
     if (!grouped[key]) {
-      // Default to the first status encountered, or PAID if it's actually paid
       grouped[key] = { name: r.ownerName, whatsapp: r.ownerWhatsApp, numbers: [], status: r.status, expiresAt: null, pixPayload: r.pixPayload };
     }
     grouped[key].numbers.push(r.number);
@@ -227,10 +250,25 @@ const Admin = () => {
     window.open(`https://wa.me/55${client.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(lines.join('\n'))}`, '_blank');
   };
 
-  const handleCancelClient = (client) => {
+  const handleCancelClient = async (client) => {
     if (client.status === 'PAID') {
-      // Already paid — cannot simply cancel, must refund via MP
-      alert(`⚠️ ${client.name.split(' ')[0]} já realizou o pagamento!\n\nPara cancelar a compra, você precisa realizar o ESTORNO manualmente pelo painel do Mercado Pago:\n1. Acesse mercadopago.com.br\n2. Vá em "Sua atividade"\n3. Localize o pagamento e clique em "Estornar"\n\nApós o estorno, os números serão liberados.`);
+      const confirm = window.confirm(`Deseja ESTORNAR o pagamento de ${client.name?.split(' ')[0]} e liberar os números? O valor será devolvido automaticamente via Mercado Pago.`);
+      if (!confirm) return;
+
+      const numData = numbersData.find(n => client.numbers.includes(n.number) && n.transactionId);
+      const txid = numData?.transactionId;
+      if (!txid) {
+        alert('ID da transação não encontrado. Estorno não pôde ser processado de forma automática.');
+        return;
+      }
+      
+      showToast('⏳ Processando estorno...');
+      const res = await refundPayment(txid, activeRaffleId, client.numbers);
+      if (res && res.success) {
+        showToast('✅ Estorno realizado com sucesso! Números liberados.', 6000);
+      } else {
+        alert('Erro ao estornar: ' + (res?.error || 'Erro desconhecido no Mercado Pago.'));
+      }
       return;
     }
     setCancelClient(client);
@@ -267,7 +305,7 @@ const Admin = () => {
 
   const handleEraseHistory = async (client) => {
     if (!window.confirm(`Deseja APAGAR o histórico de ${client.name.split(' ')[0]}?`)) return;
-    await eraseHistory(RAFFLE_ID, client.numbers);
+    await eraseHistory(activeRaffleId, client.numbers);
     showToast('🗑️ Histórico apagado.');
   };
 
@@ -279,8 +317,39 @@ const Admin = () => {
 
   const saveEditClient = async () => {
     if (!editName || !editWhatsApp) { alert('Preencha nome e número.'); return; }
-    await updateReservation(RAFFLE_ID, editingClient.numbers, editName, editWhatsApp);
+    await updateReservation(activeRaffleId, editingClient.numbers, editName, editWhatsApp);
     setEditingClient(null);
+  };
+
+  const confirmSaveEdit = async () => {
+    if (editingClient) {
+      const numbersToUpdate = editingClient.numbers;
+      await updateReservation(activeRaffleId, numbersToUpdate, editName, editWhatsApp);
+      setEditingClient(null);
+    }
+  };
+
+  const handleCreateRaffle = async (e) => {
+    e.preventDefault();
+    if (!newRaffle.title || newRaffle.totalNumbers <= 0 || newRaffle.price <= 0) {
+      alert("Preencha todos os campos corretamente.");
+      return;
+    }
+    const id = await createRaffle(newRaffle);
+    if (id) {
+      setIsCreatingRaffle(false);
+      setNewRaffle({ title: '', totalNumbers: 100, price: 0.01 });
+      showToast('🎉 Nova rifa criada com sucesso!');
+      setActiveRaffleId(id);
+    } else {
+      alert("Erro ao criar rifa.");
+    }
+  };
+
+  const toggleRaffleStatus = async (id, currentStatus) => {
+    const newStatus = currentStatus === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
+    await updateRaffle(id, { status: newStatus });
+    showToast(`Rifa ${newStatus === 'PAUSED' ? 'Pausada' : 'Ativada'}!`);
   };
 
   return (
@@ -336,31 +405,78 @@ const Admin = () => {
             <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: 'var(--text-color)', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '1.2rem', fontWeight: 'bold' }}>
               <ArrowLeft size={24} /> Painel
             </button>
-            <button onClick={handleLogout} style={{ background: '#FFF0F2', color: '#FF3B30', border: 'none', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' }}>
-              Sair
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <button 
+                onClick={() => {
+                  const isNowDark = document.body.classList.toggle('dark');
+                  localStorage.setItem('theme', isNowDark ? 'dark' : 'light');
+                  // Trigger a re-render just to update the icon visually if needed
+                  setNow(Date.now() + 1);
+                }} 
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-color)', display: 'flex' }}
+              >
+                {document.body.classList.contains('dark') ? <Sun size={24} /> : <Moon size={24} />}
+              </button>
+              <button onClick={handleLogout} style={{ background: '#FFF0F2', color: '#FF3B30', border: 'none', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' }}>
+                Sair
+              </button>
+            </div>
+          </div>
+
+          {/* Navigation Tabs */}
+          <div style={{ display: 'flex', background: 'var(--surface-solid)', padding: '6px', borderRadius: '16px', marginBottom: '24px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
+            <button 
+              onClick={() => setActiveTab('dashboard')} 
+              style={{ flex: 1, padding: '12px', border: 'none', borderRadius: '12px', background: activeTab === 'dashboard' ? 'var(--primary-light)' : 'transparent', color: activeTab === 'dashboard' ? 'var(--primary-dark)' : 'var(--text-muted)', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
+            >
+              Dashboard
+            </button>
+            <button 
+              onClick={() => setActiveTab('manage')} 
+              style={{ flex: 1, padding: '12px', border: 'none', borderRadius: '12px', background: activeTab === 'manage' ? 'var(--primary-light)' : 'transparent', color: activeTab === 'manage' ? 'var(--primary-dark)' : 'var(--text-muted)', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
+            >
+              Gerenciar Rifas
             </button>
           </div>
 
-          {/* Notification Warning Banner */}
-          {notifPermission === 'denied' && (
-            <div style={{ background: '#FFF0F2', border: '1px solid #FF3B30', color: '#FF3B30', padding: '12px', borderRadius: '12px', marginBottom: '20px', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold' }}>
-                <Bell size={18} /> Notificações Bloqueadas!
+          {activeTab === 'dashboard' && (
+            <div className="animate-fade-in">
+              {/* Raffle Selector */}
+              {raffles.length > 0 && (
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 'bold' }}>Rifa Selecionada:</label>
+                  <select 
+                    value={activeRaffleId} 
+                    onChange={e => setActiveRaffleId(e.target.value)}
+                    style={{ width: '100%', padding: '14px', borderRadius: '14px', border: 'none', background: 'var(--surface-solid)', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', fontSize: '1rem', color: 'var(--primary-dark)', fontWeight: 'bold', outline: 'none' }}
+                  >
+                    {raffles.map(r => (
+                      <option key={r.id} value={r.id}>{r.title} ({r.totalNumbers} números)</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Notification Warning Banner */}
+              {notifPermission === 'denied' && (
+                <div style={{ background: '#FFF0F2', border: '1px solid #FF3B30', color: '#FF3B30', padding: '12px', borderRadius: '12px', marginBottom: '20px', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold' }}>
+                    <Bell size={18} /> Notificações Bloqueadas!
+                  </div>
+                  <span>O seu navegador bloqueou os alertas de pagamento. Clique no ícone de <b>Cadeado</b> (ou configurações) na barra de endereços lá em cima e mude "Notificações" para <b>Permitir</b>.</span>
+                </div>
+              )}
+
+              {/* Dashboard Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '24px' }}>
+                <div style={dashCardStyle}><div style={dashTitleStyle}>Arrecadado</div><div style={{ ...dashValueStyle, color: 'var(--primary-dark)' }}>R$ {totalRevenue.toFixed(2).replace('.', ',')}</div></div>
+                <div style={dashCardStyle}><div style={dashTitleStyle}>Números Pagos</div><div style={{ ...dashValueStyle, color: '#34C759' }}>{paidNumbers}/{totalNumbers}</div></div>
+                <div style={dashCardStyle}><div style={dashTitleStyle}>Aguardando Pix</div><div style={{ ...dashValueStyle, color: '#FF9500' }}>{pendingNumbers}</div></div>
+                <div style={dashCardStyle}><div style={dashTitleStyle}>Livres</div><div style={{ ...dashValueStyle, color: '#007AFF' }}>{totalNumbers - paidNumbers - pendingNumbers}</div></div>
               </div>
-              <span>O seu navegador bloqueou os alertas de pagamento. Clique no ícone de <b>Cadeado</b> (ou configurações) na barra de endereços lá em cima e mude "Notificações" para <b>Permitir</b>.</span>
-            </div>
-          )}
 
-      {/* Dashboard Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '24px' }}>
-        <div style={dashCardStyle}><div style={dashTitleStyle}>Arrecadado</div><div style={{ ...dashValueStyle, color: 'var(--primary-dark)' }}>R$ {totalRevenue.toFixed(2).replace('.', ',')}</div></div>
-        <div style={dashCardStyle}><div style={dashTitleStyle}>Números Pagos</div><div style={{ ...dashValueStyle, color: '#34C759' }}>{paidNumbers}/{totalNumbers}</div></div>
-        <div style={dashCardStyle}><div style={dashTitleStyle}>Aguardando Pix</div><div style={{ ...dashValueStyle, color: '#FF9500' }}>{pendingNumbers}</div></div>
-        <div style={dashCardStyle}><div style={dashTitleStyle}>Livres</div><div style={{ ...dashValueStyle, color: '#007AFF' }}>{totalNumbers - paidNumbers - pendingNumbers}</div></div>
-      </div>
-
-      {/* Client List */}
-      <h2 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '12px' }}>Dados de Pessoas ({clients.length})</h2>
+              {/* Client List */}
+              <h2 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '12px' }}>Dados de Pessoas ({clients.length})</h2>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {clients.map((client, idx) => {
           const secondsLeft = client.status === 'PENDING_PAYMENT' ? getSecondsLeft(client.expiresAt) : 0;
@@ -432,7 +548,79 @@ const Admin = () => {
             Nenhuma reserva registrada ainda.
           </div>
         )}
-      </div>
+        </div>
+        </div>
+      )}
+
+      {activeTab === 'manage' && (
+        <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          
+          {/* Criar Nova Rifa Form */}
+          <div style={{ background: 'var(--surface-solid)', padding: '24px', borderRadius: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', cursor: 'pointer' }} onClick={() => setIsCreatingRaffle(!isCreatingRaffle)}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary-dark)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Plus size={20} /> Criar Nova Rifa
+              </h3>
+              <div style={{ transform: isCreatingRaffle ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s' }}>
+                <Plus size={20} color="var(--text-muted)" />
+              </div>
+            </div>
+
+            {isCreatingRaffle && (
+              <form onSubmit={handleCreateRaffle} className="animate-slide-up" style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid rgba(0,0,0,0.05)', paddingTop: '16px' }}>
+                <div>
+                  <label style={labelStyle}>Nome da Rifa</label>
+                  <input type="text" required placeholder="Ex: Chá Rifa do Arthur" className="input-field" value={newRaffle.title} onChange={e => setNewRaffle({...newRaffle, title: e.target.value})} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={labelStyle}>Qtd. Números</label>
+                    <input type="number" required min="1" className="input-field" value={newRaffle.totalNumbers} onChange={e => setNewRaffle({...newRaffle, totalNumbers: parseInt(e.target.value)})} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Preço (R$)</label>
+                    <input type="number" required min="0.01" step="0.01" className="input-field" value={newRaffle.price} onChange={e => setNewRaffle({...newRaffle, price: parseFloat(e.target.value)})} />
+                  </div>
+                </div>
+                {/* Simplified Coupon generation for now */}
+                <div>
+                  <label style={labelStyle}>Cupom (Ex: Leve 10 Pague Menos)</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '0.8rem', color: '#999' }}>*Ajustaremos cupons detalhados em breve*</span>
+                  </div>
+                </div>
+                <button type="submit" className="btn btn-primary" style={{ marginTop: '8px' }}>Criar Rifa</button>
+              </form>
+            )}
+          </div>
+
+          {/* Lista de Rifas Existentes */}
+          <h2 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '-8px' }}>Rifas Atuais ({raffles.length})</h2>
+          {raffles.map(raffle => (
+            <div key={raffle.id} style={{ background: 'var(--surface-solid)', padding: '20px', borderRadius: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '12px', borderLeft: raffle.status === 'PAUSED' ? '4px solid #FF9500' : '4px solid #34C759' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <h3 style={{ margin: '0 0 4px 0', fontSize: '1.2rem', color: 'var(--primary-dark)' }}>{raffle.title}</h3>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>{raffle.totalNumbers} números • R$ {raffle.price?.toFixed(2).replace('.', ',')}</p>
+                </div>
+                <span style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold', background: raffle.status === 'PAUSED' ? '#FFF3E0' : '#E8F5E9', color: raffle.status === 'PAUSED' ? '#FF9500' : '#34C759' }}>
+                  {raffle.status === 'PAUSED' ? 'EM MANUTENÇÃO' : 'ATIVA'}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+                <button onClick={() => { setActiveRaffleId(raffle.id); setActiveTab('dashboard'); }} className="btn" style={{ flex: 1, padding: '10px', background: '#F0F4FF', color: '#007AFF', border: 'none' }}>
+                  <Eye size={18} style={{ marginRight: '6px' }} /> Ver Painel
+                </button>
+                <button onClick={() => toggleRaffleStatus(raffle.id, raffle.status)} className="btn" style={{ flex: 1, padding: '10px', background: raffle.status === 'PAUSED' ? '#E8F5E9' : '#FFF3E0', color: raffle.status === 'PAUSED' ? '#34C759' : '#FF9500', border: 'none' }}>
+                  {raffle.status === 'PAUSED' ? <><PlayCircle size={18} style={{ marginRight: '6px' }} /> Reativar</> : <><PauseCircle size={18} style={{ marginRight: '6px' }} /> Pausar Rifa</>}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       </div>
     </div>
   );

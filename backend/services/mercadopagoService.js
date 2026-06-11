@@ -1,4 +1,4 @@
-const { MercadoPagoConfig, Payment } = require('mercadopago');
+const { MercadoPagoConfig, Payment, PaymentRefund } = require('mercadopago');
 
 // Inicializa o Mercado Pago com o Token que virá das variáveis de ambiente (.env)
 // Se não tiver, usa um vazio provisoriamente para o servidor não quebrar.
@@ -7,6 +7,7 @@ const client = new MercadoPagoConfig({
 });
 
 const paymentClient = new Payment(client);
+const refundClient = new PaymentRefund(client);
 
 /**
  * Cria um Pix no Mercado Pago
@@ -52,7 +53,18 @@ const getPaymentStatus = async (paymentId) => {
   }
 };
 
+const refundPayment = async (paymentId) => {
+  try {
+    const result = await refundClient.create({ payment_id: paymentId });
+    return { success: true, result };
+  } catch (error) {
+    console.error("Erro ao estornar pagamento MP:", error);
+    return { success: false, error };
+  }
+};
+
 module.exports = {
   createPixPayment,
-  getPaymentStatus
+  getPaymentStatus,
+  refundPayment
 };

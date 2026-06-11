@@ -1,5 +1,9 @@
 {
   "appId": "br.com.rifasbabygo",
   "appName": "RifasBabyGo",
-  "webDir": "dist"
+  "webDir": "dist",
+  "server": {
+    "url": "https://rifas-baby-go.vercel.app",
+    "cleartext": true
+  }
 }

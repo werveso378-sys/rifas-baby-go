@@ -5,7 +5,15 @@ import {
   doc, 
   onSnapshot, 
   runTransaction,
-  writeBatch
+  writeBatch,
+  getDoc,
+  setDoc,
+  getDocs,
+  addDoc,
+  updateDoc,
+  query,
+  where,
+  orderBy
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -188,5 +196,56 @@ export const getClientNumbers = async (raffleId, whatsapp) => {
   } catch (error) {
     console.error("Error fetching client numbers:", error);
     return [];
+  }
+};
+
+// ─── Gerenciamento de Rifas (Admin) ─────────────────────────────────────────
+
+export const listenToRaffles = (callback) => {
+  const q = collection(db, "raffles");
+  return onSnapshot(q, (snapshot) => {
+    const raffles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    // Sort by createdAt descending locally
+    raffles.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    callback(raffles);
+  });
+};
+
+export const createRaffle = async (raffleData) => {
+  try {
+    const ref = collection(db, "raffles");
+    const docRef = await addDoc(ref, {
+      ...raffleData,
+      status: "ACTIVE", // ACTIVE, PAUSED, FINISHED
+      createdAt: new Date().toISOString()
+    });
+    return docRef.id;
+  } catch (error) {
+    console.error("Error creating raffle:", error);
+    return null;
+  }
+};
+
+export const updateRaffle = async (raffleId, updates) => {
+  try {
+    const ref = doc(db, "raffles", raffleId);
+    await updateDoc(ref, updates);
+    return true;
+  } catch (error) {
+    console.error("Error updating raffle:", error);
+    return false;
+  }
+};
+
+export const getActiveRaffle = async () => {
+  try {
+    const q = query(collection(db, "raffles"), where("status", "in", ["ACTIVE", "PAUSED"]));
+    const snapshot = await getDocs(q);
+    const raffles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    raffles.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    return raffles[0] || null;
+  } catch (error) {
+    console.error("Error getting active raffle:", error);
+    return null;
   }
 };

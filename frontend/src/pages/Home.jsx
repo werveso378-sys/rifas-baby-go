@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { listenToNumbers, reserveNumbers, cancelReservation } from '../services/firebaseService';
+import { listenToNumbers, reserveNumbers, cancelReservation, listenToRaffles } from '../services/firebaseService';
 import { generatePix } from '../services/paymentService';
 import NumberGrid from '../components/NumberGrid';
 import BottomSheetModal from '../components/BottomSheetModal';
-import { Copy, QrCode, CheckCircle, ChevronRight, Check, Sparkles } from 'lucide-react';
+import { Copy, QrCode, CheckCircle, ChevronRight, Check, Sparkles, Clock as ClockIcon } from 'lucide-react';
 
-const PRECO = 0.01;
-const RAFFLE_ID = "baby_shower_01";
 const API_URL = import.meta.env.VITE_API_URL || 'https://rifas-baby-go.onrender.com/api';
 
 const Home = () => {
@@ -57,12 +55,25 @@ const Home = () => {
     }
   }, [numbersData, pixData, selectedNumbers]);
 
+  // Active Raffle State
+  const [raffle, setRaffle] = useState(null);
+
   useEffect(() => {
-    const unsubscribe = listenToNumbers(RAFFLE_ID, (data) => {
-      setNumbersData(data);
+    const unsubscribe = listenToRaffles((raffles) => {
+      // Find the first non-finished raffle
+      const active = raffles.find(r => r.status === 'ACTIVE' || r.status === 'PAUSED');
+      setRaffle(active || null);
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!raffle?.id) return;
+    const unsubscribe = listenToNumbers(raffle.id, (data) => {
+      setNumbersData(data);
+    });
+    return () => unsubscribe();
+  }, [raffle?.id]);
 
   // ── Payment Polling Fallback ──────────────────────────────────────────────────
   // If webhook fails (Render cold-start), frontend polls every 15s while Pix is open
@@ -90,6 +101,7 @@ const Home = () => {
     });
   };
 
+  const PRECO = raffle?.price || 0.01;
   const totalValue = selectedNumbers.length * PRECO;
 
   const handleWhatsAppChange = (e) => {
@@ -118,20 +130,30 @@ const Home = () => {
     setTimeLeft(300);
 
     try {
-      const reserved = await reserveNumbers(RAFFLE_ID, selectedNumbers, { name, whatsapp });
-      if (!reserved) {
-        alert('Alguns números já foram escolhidos! Tente novamente.');
+      const success = await reserveNumbers(raffle.id, selectedNumbers, { name, whatsapp });
+      if (!success) {
+        alert("Alguns números já foram reservados. Tente outros.");
         setLoading(false);
-        setIsModalOpen(false);
         return;
+      }
+
+      // 🎰 Roleta / Sorteio do Cupom Instantâneo
+      let finalValue = totalValue;
+      let wonCoupon = false;
+      
+      // Regra de exemplo: Comprou 10 ou mais números = tem 25% de chance de ganhar 15% de desconto
+      if (selectedNumbers.length >= 10 && Math.random() < 0.25) {
+        wonCoupon = true;
+        finalValue = totalValue * 0.85; // 15% de desconto
+        alert("🎉 PARABÉNS! Você comprou 10+ números e acabou de SORTEAR UM CUPOM de 15% de Desconto na sua compra!");
       }
 
       const data = await generatePix({
         customerName: name,
         customerPhone: whatsapp,
         numbers: selectedNumbers,
-        value: totalValue,
-        raffleId: RAFFLE_ID
+        value: finalValue,
+        raffleId: raffle.id
       });
 
       // Normalise response from any backend format
@@ -143,12 +165,12 @@ const Home = () => {
           chargeId: data.chargeId || data.pix?.id || null,
         });
       } else {
-        await cancelReservation(RAFFLE_ID, selectedNumbers);
+        await cancelReservation(raffle.id, selectedNumbers);
         alert('Não foi possível gerar o Pix. Verifique sua conexão e tente novamente.');
       }
     } catch (error) {
       console.error('Erro ao gerar Pix:', error);
-      await cancelReservation(RAFFLE_ID, selectedNumbers).catch(() => {});
+      await cancelReservation(raffle.id, selectedNumbers).catch(() => {});
       alert('Erro de conexão. Verifique seu sinal de internet e tente novamente.');
     } finally {
       setLoading(false);
@@ -164,7 +186,6 @@ const Home = () => {
         setCopied(true);
         setTimeout(() => setCopied(false), 2500);
       } else {
-        // Safe fallback without DOM injection that crashes WebViews
         throw new Error('Clipboard API not available');
       }
     } catch (err) {
@@ -193,8 +214,9 @@ const Home = () => {
   };
 
   const handleCancel = async () => {
+    if (!raffle?.id) return;
     if (window.confirm("Deseja realmente cancelar a reserva e liberar seus números para outras pessoas?")) {
-      await cancelReservation(RAFFLE_ID, selectedNumbers);
+      await cancelReservation(raffle.id, selectedNumbers);
       setIsModalOpen(false);
       setPixData(null);
       setSelectedNumbers([]);
@@ -214,21 +236,69 @@ const Home = () => {
     adminTapRef.current = setTimeout(() => setAdminTaps(0), 1200);
   };
 
+  if (!raffle) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: '20px' }}>
+        <h2 style={{ color: 'var(--text-color)' }}>Nenhuma rifa disponível no momento.</h2>
+      </div>
+    );
+  }
+
+  const isPaused = raffle.status === 'PAUSED';
+
   return (
-    <div className="animate-fade-in w-full" style={{ paddingBottom: '40px' }}>
-      <div style={heroStyle} className="animate-fade-in">
+    <div className={`app-container animate-fade-in ${isPaused ? 'blurred' : ''}`} style={{ filter: isPaused ? 'blur(4px)' : 'none', pointerEvents: isPaused ? 'none' : 'auto', paddingBottom: '40px' }}>
+      
+      {isPaused && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(10px)', pointerEvents: 'auto', padding: '24px', textAlign: 'center' }}>
+          <ClockIcon size={48} color="#FF9500" style={{ marginBottom: '16px' }} />
+          <h2 style={{ color: 'var(--primary-dark)', fontSize: '1.8rem', marginBottom: '12px' }}>Rifa Pausada para Manutenção</h2>
+          <p style={{ color: 'var(--text-color)', fontSize: '1.1rem', maxWidth: '300px', lineHeight: '1.5' }}>
+            Não se preocupe. Nenhum valor pago será perdido. Aguarde alguns instantes enquanto organizamos o sistema.
+          </p>
+        </div>
+      )}
+
+      <div 
+        style={{
+          width: '100%',
+          maxWidth: '400px',
+          height: '250px',
+          position: 'relative',
+          overflow: 'hidden',
+          borderRadius: '0 0 24px 24px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
+          background: '#000',
+          margin: '0 auto'
+        }}
+      >
         <img 
-          src="/banner.png" 
-          alt="Urso Chá de Bebê" 
-          className="animate-float"
-          style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: '50%', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', marginBottom: '16px' }} 
+          src="/baby_shower_header.png" 
+          alt="Banner Rifa"
+          style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.9 }}
+          onError={(e) => { e.target.onerror = null; e.target.src = "/banner.png" }}
         />
-        <h1 style={{ fontSize: '2.4rem', marginBottom: '8px', lineHeight: '1.1' }} className="text-gradient">
-          Chá de <span onClick={handleAdminTap} style={{ cursor: 'default' }}>Bebê</span>
-        </h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', maxWidth: '280px', margin: '0 auto 10px' }}>
-          Escolha o seu ponto da sorte e participe!
-        </p>
+        {/* Gradiente sutil em cima e embaixo */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '40%', background: 'linear-gradient(to bottom, rgba(0,0,0,0.5), transparent)' }}></div>
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)' }}></div>
+        
+        {/* Texto do Header */}
+        <div style={{ position: 'absolute', bottom: '20px', left: '20px', right: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+          <div style={{ textShadow: '0 2px 4px rgba(0,0,0,0.3)' }} onClick={handleAdminTap}>
+            <span style={{ background: 'var(--accent-pink)', color: 'white', padding: '4px 10px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', display: 'inline-block' }}>
+              Ativa Agora
+            </span>
+            <h1 style={{ color: 'white', margin: 0, fontSize: '1.5rem', fontWeight: '800', lineHeight: '1.1' }}>
+              {raffle.title || "Rifa"}
+            </h1>
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', padding: '10px 14px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.3)', color: 'white', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}>
+            <span style={{ fontSize: '0.7rem', opacity: 0.9, fontWeight: '600' }}>Preço Fixo</span>
+            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', display: 'flex', alignItems: 'baseline', gap: '2px' }}>
+              <span style={{ fontSize: '0.8rem' }}>R$</span> {PRECO.toFixed(2).replace('.', ',')}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div style={{ padding: '0 16px', marginTop: '5px' }}>

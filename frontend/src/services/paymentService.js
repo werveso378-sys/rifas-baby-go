@@ -30,3 +30,27 @@ export const generatePix = async (paymentData) => {
     };
   }
 };
+
+/**
+ * Solicita o estorno de um Pix ao backend
+ */
+export const refundPayment = async (paymentId, raffleId, numbers) => {
+  try {
+    const response = await fetch(`${API_URL}/pix/refund/${paymentId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ raffleId, numbers })
+    });
+
+    if (!response.ok) {
+      throw new Error('Falha ao estornar o Pix');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Erro no refundPayment:', error);
+    return { success: false, error: error.message };
+  }
+};
