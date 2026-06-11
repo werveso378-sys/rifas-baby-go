@@ -3,7 +3,7 @@ const { MercadoPagoConfig, Payment } = require('mercadopago');
 // Inicializa o Mercado Pago com o Token que virá das variáveis de ambiente (.env)
 // Se não tiver, usa um vazio provisoriamente para o servidor não quebrar.
 const client = new MercadoPagoConfig({ 
-  accessToken: process.env.MP_ACCESS_TOKEN || 'APP_USR-00000000-0000-0000-0000-000000000000' 
+  accessToken: process.env.MP_ACCESS_TOKEN || 'APP_USR-6992101378676109-061112-64aff7c38952c08df0e4e2c4daa8c24d-3171516763' 
 });
 
 const paymentClient = new Payment(client);
