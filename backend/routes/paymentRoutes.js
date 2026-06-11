@@ -124,28 +124,65 @@ router.post('/pix/create-mp', async (req, res) => {
 });
 
 router.post('/webhook/mercadopago', async (req, res) => {
+  // Respond immediately so Mercado Pago doesn't retry (Render cold-start can be slow)
+  res.status(200).send('OK');
+
   try {
-    const { action, type, data } = req.body;
-    
-    // Mercado Pago envia type="payment" ou action="payment.updated" dependendo da versão
-    if (type === 'payment' || (action && action.includes('payment'))) {
-      const paymentId = data?.id;
-      if (paymentId) {
-        const paymentInfo = await mercadopagoService.getPaymentStatus(paymentId);
-        
-        if (paymentInfo && paymentInfo.status === 'approved') {
-          const txid = String(paymentId);
-          console.log(`[Webhook MP] Pagamento aprovado: ${txid}`);
-          // Atualizamos todos os números vinculados a esse ID para PAGO
-          await firebaseAdminService.updateNumberStatusByTxid('baby_shower_01', txid, 'PAID');
+    const body = req.body;
+    console.log('[Webhook MP] Payload recebido:', JSON.stringify(body));
+
+    // MP sends different shapes depending on version:
+    // v1: { action: "payment.updated", data: { id: "123" } }
+    // v2: { type: "payment", data: { id: "123" } }
+    // Also sends test pings with type="test" — ignore those
+    const isPaymentEvent = body.type === 'payment' || (body.action && String(body.action).includes('payment'));
+    if (!isPaymentEvent) {
+      console.log('[Webhook MP] Evento ignorado:', body.type || body.action);
+      return;
+    }
+
+    const paymentId = body.data?.id;
+    if (!paymentId) {
+      console.log('[Webhook MP] Sem paymentId no payload');
+      return;
+    }
+
+    console.log('[Webhook MP] Verificando pagamento ID:', paymentId);
+    const paymentInfo = await mercadopagoService.getPaymentStatus(paymentId);
+
+    console.log('[Webhook MP] Status do pagamento:', paymentInfo?.status, '| External ref:', paymentInfo?.external_reference);
+
+    if (paymentInfo && paymentInfo.status === 'approved') {
+      const txid = String(paymentId);
+      console.log(`[Webhook MP] ✅ Pagamento aprovado: ${txid}`);
+
+      // Strategy 1: update by transactionId stored when creating pix
+      const updated = await firebaseAdminService.updateNumberStatusByTxid('baby_shower_01', txid, 'PAID');
+
+      // Strategy 2: fallback via external_reference if transactionId lookup failed
+      if (!updated && paymentInfo.external_reference) {
+        try {
+          const ref = JSON.parse(paymentInfo.external_reference);
+          if (ref.raffleId && Array.isArray(ref.numbers)) {
+            const batch = firebaseAdminService.db.batch();
+            for (const num of ref.numbers) {
+              const docRef = firebaseAdminService.db
+                .collection('raffles').doc(ref.raffleId)
+                .collection('numbers').doc(String(num));
+              batch.update(docRef, { status: 'PAID', paidAt: new Date().toISOString() });
+            }
+            await batch.commit();
+            console.log(`[Webhook MP] ✅ Fallback: ${ref.numbers.length} número(s) marcados como PAID via external_reference`);
+          }
+        } catch (e) {
+          console.error('[Webhook MP] Fallback parse error:', e.message);
         }
       }
+    } else {
+      console.log(`[Webhook MP] Status não aprovado: ${paymentInfo?.status}`);
     }
-    
-    res.status(200).send('OK');
   } catch (error) {
-    console.error('Erro Webhook MP:', error);
-    res.status(500).send('Error');
+    console.error('[Webhook MP] Erro interno:', error.message);
   }
 });
 

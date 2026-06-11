@@ -135,12 +135,29 @@ const Home = () => {
     }
   };
 
-  const handleCopyPix = () => {
-    const payload = pixData?.payload || pixData?.pix?.qr_code;
-    if (payload) {
-      navigator.clipboard.writeText(payload);
+  const handleCopyPix = async () => {
+    const payload = pixData?.payload;
+    if (!payload) return;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(payload);
+      } else {
+        // Fallback for Android WebView / older browsers
+        const el = document.createElement('textarea');
+        el.value = payload;
+        el.style.position = 'fixed';
+        el.style.opacity = '0';
+        document.body.appendChild(el);
+        el.focus();
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+      }
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopied(false), 2500);
+    } catch (err) {
+      console.error('Clipboard error:', err);
+      alert('Não foi possível copiar automaticamente. Segure o texto abaixo para copiar manualmente.');
     }
   };
 
@@ -215,7 +232,10 @@ const Home = () => {
         </div>
       </div>
 
-      <BottomSheetModal isOpen={isModalOpen} onClose={() => { if (!loading) { setIsModalOpen(false); } }}>
+      <BottomSheetModal isOpen={isModalOpen} onClose={() => { 
+        // Only allow closing the modal if there's no active pix session
+        if (!loading && !pixData) setIsModalOpen(false);
+      }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px 20px' }}>
             <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>⏳</div>
@@ -307,9 +327,27 @@ const Home = () => {
               />
             )}
 
-            <button className="btn btn-secondary" onClick={handleCopyPix} style={{ marginBottom: '12px' }}>
+            <button className="btn btn-secondary" onClick={handleCopyPix} style={{ marginBottom: '8px' }}>
               {copied ? <><Check size={20} /> Copiado!</> : <><Copy size={20} /> Copiar Chave Pix</>}
             </button>
+
+            {/* Selectable fallback for manual copy */}
+            <div
+              style={{ 
+                background: 'rgba(0,0,0,0.04)', borderRadius: '10px', padding: '10px 14px',
+                marginBottom: '12px', fontSize: '0.72rem', color: 'var(--text-muted)',
+                wordBreak: 'break-all', textAlign: 'left', userSelect: 'text',
+                border: '1px dashed rgba(0,0,0,0.1)', cursor: 'text'
+              }}
+              onClick={e => {
+                const range = document.createRange();
+                range.selectNodeContents(e.currentTarget);
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);
+              }}
+            >
+              {pixData?.payload || 'Chave não disponível'}
+            </div>
 
             <button 
               className="btn btn-secondary" 
