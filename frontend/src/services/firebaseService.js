@@ -15,6 +15,7 @@ import {
   where,
   orderBy
 } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCd6MSdb5GHdiCkyaKSMOmhFDfFFtH5UOs",
@@ -28,6 +29,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 export const listenToNumbers = (raffleId, callback) => {
   const q = collection(db, "raffles", raffleId, "numbers");
@@ -264,3 +266,43 @@ export const getActiveRaffle = async () => {
     return null;
   }
 };
+
+
+// --- Settings e Upload ------------------------------------------------------
+
+export const getSettings = async () => {
+  try {
+    const docRef = doc(db, "settings", "global");
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data();
+    }
+    return {};
+  } catch (error) {
+    console.error("Error fetching settings:", error);
+    return {};
+  }
+};
+
+export const updateSettings = async (updates) => {
+  try {
+    const docRef = doc(db, "settings", "global");
+    await setDoc(docRef, updates, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error updating settings:", error);
+    return false;
+  }
+};
+
+export const uploadFile = async (file, path) => {
+  try {
+    const storageRef = ref(storage, path);
+    await uploadBytes(storageRef, file);
+    return await getDownloadURL(storageRef);
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    return null;
+  }
+};
+
