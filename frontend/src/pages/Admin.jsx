@@ -7,6 +7,40 @@ import { playDing, playCashRegister, initAudio } from '../services/soundService'
 import ImageCropper from '../components/ImageCropper';
 import { initPushNotifications } from '../services/pushService';
 import { Capacitor } from '@capacitor/core';
+import '../index.css';
+
+const labelStyle = { display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-muted)' };
+const iconBtnStyle = { background: 'none', border: 'none', cursor: 'pointer', color: '#999' };
+const dashCardStyle = {
+  background: 'var(--surface-solid)',
+  padding: '24px',
+  borderRadius: '20px',
+  boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
+  textAlign: 'left'
+};
+const dashTitleStyle = { fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '600' };
+const dashValueStyle = { fontSize: '1.35rem', fontWeight: 'bold' };
+const actionBtnStyle = {
+  border: 'none', borderRadius: '12px', fontSize: '0.8rem',
+  fontWeight: 'bold', display: 'flex', alignItems: 'center',
+  justifyContent: 'center', gap: '6px', cursor: 'pointer',
+  transition: 'transform 0.1s'
+};
+const modalOverlayStyle = {
+  position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+  background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+  zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center'
+};
+const modalContentStyle = {
+  background: 'var(--surface-solid)', borderRadius: '24px', padding: '24px',
+  width: '90%', maxWidth: '400px', maxHeight: '90vh', overflowY: 'auto'
+};
+const toastStyle = {
+  position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
+  background: '#333', color: '#FFF', padding: '12px 24px', borderRadius: '30px',
+  zIndex: 9999, fontWeight: 'bold', boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+  display: 'flex', alignItems: 'center', gap: '8px'
+};
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://rifas-baby-go.onrender.com/api';
 const VAPID_PUBLIC = 'BLqLhw2gqsuw7dX15HJmL9mx652r3FBViKcbjTYsvPf1BNGOiORuW8mAeoQHnb9d0h3ZB0XacxfriFq-FHm6FPY';
@@ -583,7 +617,6 @@ const Admin = () => {
               )}
 
               {/* Dashboard Cards */}
-              {/* Dashboard Cards - Kiwify Style */}
               <div style={{ background: '#121214', margin: '-16px -16px 24px -16px', padding: '24px 16px', borderRadius: '0 0 24px 24px', position: 'relative', overflow: 'hidden' }}>
                 {/* Decorative gradients */}
                 <div style={{ position: 'absolute', top: -50, right: -50, width: 150, height: 150, background: 'rgba(0, 230, 118, 0.15)', filter: 'blur(50px)', borderRadius: '50%' }}></div>
@@ -833,41 +866,6 @@ const Admin = () => {
       </div>
     </div>
   );
-};
-
-const labelStyle = { display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-muted)' };
-const iconBtnStyle = { background: 'none', border: 'none', cursor: 'pointer', color: '#999' };
-
-const dashCardStyle = {
-  background: 'var(--surface-solid)',
-  padding: '14px 16px',
-  borderRadius: '16px',
-  boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
-  border: '1px solid rgba(128,128,128,0.05)'
-};
-const dashTitleStyle = { fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '600' };
-const dashValueStyle = { fontSize: '1.35rem', fontWeight: 'bold' };
-
-const actionBtnStyle = {
-  border: 'none', padding: '8px 14px', borderRadius: '20px',
-  display: 'flex', alignItems: 'center', gap: '6px',
-  fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap'
-};
-
-const modalOverlayStyle = {
-  position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-  background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
-  zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
-};
-const modalContentStyle = {
-  background: 'var(--surface-solid)', width: '100%', maxWidth: '400px',
-  padding: '24px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
-};
-const toastStyle = {
-  position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
-  background: '#1D1D1F', color: 'white', padding: '10px 20px',
-  borderRadius: '30px', display: 'flex', alignItems: 'center', gap: '8px',
-  boxShadow: '0 10px 30px rgba(0,0,0,0.2)', zIndex: 9999, fontWeight: '600', fontSize: '0.85rem'
 };
 
 export default Admin;

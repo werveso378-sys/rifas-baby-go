@@ -1,12 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { listenToNumbers, reserveNumbers, cancelReservation, listenToRaffles } from '../services/firebaseService';
+import { listenToNumbers, reserveNumbers, cancelReservation, listenToRaffles, getSettings } from '../services/firebaseService';
 import { generatePix } from '../services/paymentService';
+import { loadCustomAudios } from '../services/soundService';
 import NumberGrid from '../components/NumberGrid';
 import BottomSheetModal from '../components/BottomSheetModal';
 import { Copy, QrCode, CheckCircle, ChevronRight, Check, Sparkles, Clock as ClockIcon, Baby, Sun, Moon } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://rifas-baby-go.onrender.com/api';
+
+const heroStyle = {
+  width: '100%',
+  padding: '40px 20px 20px',
+  textAlign: 'center',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
 
 const Home = () => {
   const navigate = useNavigate();
@@ -88,12 +99,10 @@ const Home = () => {
     });
 
     // Load custom audios from settings
-    import('../services/firebaseService').then(m => {
-      m.getSettings().then(settings => {
-        if (settings) {
-          import('../services/soundService').then(s => s.loadCustomAudios(settings));
-        }
-      });
+    getSettings().then(settings => {
+      if (settings) {
+        loadCustomAudios(settings);
+      }
     });
 
     return () => unsubscribe();
@@ -158,7 +167,7 @@ const Home = () => {
     }
   };
 
-  const PRECO = raffle?.price || 0.01;
+  const PRECO = Number(raffle?.price) || 0.01;
   const totalValue = selectedNumbers.length * PRECO;
 
   const handleWhatsAppChange = (e) => {
@@ -602,14 +611,6 @@ const Home = () => {
   );
 };
 
-const heroStyle = {
-  width: '100%',
-  padding: '40px 20px 20px',
-  textAlign: 'center',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-};
+
 
 export default Home;

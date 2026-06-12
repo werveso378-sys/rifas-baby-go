@@ -1,29 +1,12 @@
 import React from 'react';
 
-const BottomSheetModal = ({ isOpen, onClose, children }) => {
-  if (!isOpen) return null;
-
-  return (
-    <div style={overlayStyle} onClick={onClose} className="animate-fade-in">
-      <div 
-        style={sheetStyle} 
-        onClick={(e) => e.stopPropagation()} 
-        className="animate-slide-up glass"
-      >
-        <div style={dragHandleStyle}></div>
-        {children}
-      </div>
-    </div>
-  );
-};
-
 const overlayStyle = {
   position: 'fixed',
   top: 0,
   left: 0,
   right: 0,
   bottom: 0,
-  backgroundColor: 'rgba(33, 42, 62, 0.4)', // backdrop escuro
+  backgroundColor: 'rgba(33, 42, 62, 0.4)',
   backdropFilter: 'blur(4px)',
   zIndex: 1000,
   display: 'flex',
@@ -53,5 +36,24 @@ const dragHandleStyle = {
   borderRadius: '10px',
   margin: '0 auto 20px',
 };
+
+const BottomSheetModal = ({ isOpen, onClose, children }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div style={overlayStyle} onClick={onClose} className="animate-fade-in">
+      <div 
+        style={sheetStyle} 
+        onClick={(e) => e.stopPropagation()} 
+        className="animate-slide-up glass"
+      >
+        <div style={dragHandleStyle}></div>
+        {children}
+      </div>
+    </div>
+  );
+};
+
+
 
 export default BottomSheetModal;
