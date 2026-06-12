@@ -37,6 +37,9 @@ const Home = () => {
   const [copied, setCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
 
+  // Active Raffle State
+  const [raffle, setRaffle] = useState(null);
+
   // Countdown Timer
   useEffect(() => {
     let timer;
@@ -87,9 +90,6 @@ const Home = () => {
       }
     }
   }, [numbersData, pixData, selectedNumbers, raffle]);
-
-  // Active Raffle State
-  const [raffle, setRaffle] = useState(null);
 
   useEffect(() => {
     const unsubscribe = listenToRaffles((raffles) => {
