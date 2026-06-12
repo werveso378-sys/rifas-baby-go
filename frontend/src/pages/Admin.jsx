@@ -6,6 +6,7 @@ import { refundPayment } from '../services/paymentService';
 import { playDing, playCashRegister, initAudio } from '../services/soundService';
 import ImageCropper from '../components/ImageCropper';
 import { initPushNotifications } from '../services/pushService';
+import { Capacitor } from '@capacitor/core';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://rifas-baby-go.onrender.com/api';
 const VAPID_PUBLIC = 'BLqLhw2gqsuw7dX15HJmL9mx652r3FBViKcbjTYsvPf1BNGOiORuW8mAeoQHnb9d0h3ZB0XacxfriFq-FHm6FPY';
@@ -164,7 +165,15 @@ const Admin = () => {
         subscribeToPush();
       }
     } else {
-      alert('Usuário ou senha incorretos!');
+      alert('Credenciais Incorretas!');
+    }
+  };
+
+  const handleHomeDoubleClick = () => {
+    if (Capacitor.isNativePlatform()) {
+      window.location.reload();
+    } else {
+      navigate('/');
     }
   };
 
@@ -504,24 +513,27 @@ const Admin = () => {
       <div style={{ maxWidth: '400px', width: '100%', paddingBottom: '30px' }}>
           
           {/* Top Navbar */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', paddingTop: '12px' }}>
-            <button onClick={() => navigate('/')} style={{ background: 'var(--surface-solid)', border: '1px solid rgba(128,128,128,0.1)', color: 'var(--primary-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: '10px', borderRadius: '50%', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
-              <Home size={24} />
+          <div className="glass" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', padding: '12px 20px', borderRadius: 'var(--border-radius-lg)' }}>
+            <button 
+              onClick={() => showToast('Dê um clique duplo para voltar!', 2000)}
+              onDoubleClick={handleHomeDoubleClick} 
+              style={{ background: 'transparent', border: 'none', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: '8px' }}
+            >
+              <Home size={28} />
             </button>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
               <button 
                 onClick={() => {
                   const isNowDark = document.body.classList.toggle('dark');
                   localStorage.setItem('theme', isNowDark ? 'dark' : 'light');
-                  // Trigger a re-render just to update the icon visually if needed
                   setNow(Date.now() + 1);
                 }} 
-                style={{ background: 'var(--surface-solid)', border: '1px solid rgba(128,128,128,0.1)', cursor: 'pointer', color: 'var(--text-color)', display: 'flex', padding: '10px', borderRadius: '50%', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-main)', display: 'flex', padding: '8px' }}
               >
-                {document.body.classList.contains('dark') ? <Sun size={24} className="animate-spin-slower" color="#5AC8FA" /> : <Moon size={24} className="animate-spin-slow" color="#FF9500" />}
+                {document.body.classList.contains('dark') ? <Sun size={28} className="animate-spin-slower" color="var(--accent-blue)" /> : <Moon size={28} className="animate-spin-slow" color="#F59E0B" />}
               </button>
-              <button onClick={handleLogout} style={{ background: '#FFF0F2', color: '#FF3B30', border: 'none', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' }}>
-                Sair
+              <button onClick={handleLogout} style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', border: 'none', padding: '8px 16px', borderRadius: 'var(--border-radius-md)', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>
+                <LogOut size={20} />
               </button>
             </div>
           </div>

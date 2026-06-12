@@ -4,7 +4,7 @@ import { listenToNumbers, reserveNumbers, cancelReservation, listenToRaffles } f
 import { generatePix } from '../services/paymentService';
 import NumberGrid from '../components/NumberGrid';
 import BottomSheetModal from '../components/BottomSheetModal';
-import { Copy, QrCode, CheckCircle, ChevronRight, Check, Sparkles, Clock as ClockIcon, Baby } from 'lucide-react';
+import { Copy, QrCode, CheckCircle, ChevronRight, Check, Sparkles, Clock as ClockIcon, Baby, Sun, Moon } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://rifas-baby-go.onrender.com/api';
 
@@ -14,6 +14,7 @@ const Home = () => {
   const [selectedNumbers, setSelectedNumbers] = useState([]);
   const [adminTaps, setAdminTaps] = useState(0);
   const adminTapRef = React.useRef(null);
+  const [isDark, setIsDark] = useState(() => document.body.classList.contains('dark'));
   
   // Checkout State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -343,6 +344,25 @@ const Home = () => {
         {/* Gradiente sutil em cima e embaixo */}
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '40%', background: 'linear-gradient(to bottom, rgba(0,0,0,0.5), transparent)' }}></div>
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)' }}></div>
+        
+        {/* Theme Toggle Floating Button */}
+        <button 
+          onClick={() => {
+            const nowDark = document.body.classList.toggle('dark');
+            localStorage.setItem('theme', nowDark ? 'dark' : 'light');
+            setIsDark(nowDark);
+          }}
+          style={{ 
+            position: 'absolute', top: '16px', right: '16px', zIndex: 10,
+            background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255,255,255,0.3)', color: 'white',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', padding: '10px', borderRadius: '50%',
+            boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+          }}
+        >
+          {isDark ? <Sun size={24} className="animate-spin-slower" color="#22D3EE" /> : <Moon size={24} className="animate-spin-slow" color="#FCD34D" />}
+        </button>
         
         {/* Texto do Header */}
         <div style={{ position: 'absolute', bottom: '20px', left: '20px', right: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>

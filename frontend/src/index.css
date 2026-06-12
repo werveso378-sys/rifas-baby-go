@@ -1,43 +1,43 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  /* Premium Apple-like Pastel Palette */
-  --primary-dark: #1D1D1F; /* Apple dark gray */
-  --accent: #FF6B81;       /* Vibrant soft pink */
-  --accent-light: #FFE0E5;
-  --accent-blue: #5AC8FA;  /* Apple pastel blue */
+  /* Premium Fintech Palette (Purple/Cyan) */
+  --primary-dark: #312E81; /* Deep Indigo */
+  --accent: #6366F1;       /* Indigo/Purple Vibrant */
+  --accent-light: #E0E7FF;
+  --accent-blue: #06B6D4;  /* Cyan */
   
-  --background: #F5F5F7;   /* Apple base background */
-  --surface: rgba(255, 255, 255, 0.7);
-  --surface-solid: #ffffff;
+  --background: #F8FAFC;   /* Very light gray/blue */
+  --surface: rgba(255, 255, 255, 0.65);
+  --surface-solid: #FFFFFF;
   
-  --text-main: #1D1D1F;
-  --text-muted: #86868B;
+  --text-main: #1E293B;
+  --text-muted: #64748B;
   
   --border-radius-xl: 36px;
   --border-radius-lg: 24px;
-  --border-radius-md: 18px;
+  --border-radius-md: 16px;
   --border-radius-sm: 12px;
   
-  --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.04);
-  --shadow-hover: 0 14px 40px rgba(0, 0, 0, 0.08);
+  --shadow-soft: 0 10px 30px rgba(99, 102, 241, 0.08);
+  --shadow-hover: 0 14px 40px rgba(99, 102, 241, 0.15);
 }
 
 body.dark {
-  --primary-dark: #F5F5F7;
-  --accent: #FF6B81;
-  --accent-light: #3A1A20;
-  --accent-blue: #5AC8FA;
+  --primary-dark: #E0E7FF;
+  --accent: #818CF8;
+  --accent-light: #1E1B4B;
+  --accent-blue: #22D3EE;
   
-  --background: #1C1C1E;
-  --surface: rgba(44, 44, 46, 0.8);
-  --surface-solid: #2C2C2E;
+  --background: #0F172A; /* Deep Dark Blue/Slate */
+  --surface: rgba(30, 41, 59, 0.6);
+  --surface-solid: #1E293B;
   
-  --text-main: #E5E5EA;
-  --text-muted: #8E8E93;
+  --text-main: #F8FAFC;
+  --text-muted: #94A3B8;
   
-  --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.2);
-  --shadow-hover: 0 14px 40px rgba(0, 0, 0, 0.3);
+  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.4);
+  --shadow-hover: 0 14px 40px rgba(0, 0, 0, 0.6);
 }
 
 body.dark #root {
@@ -55,11 +55,11 @@ body {
   background: var(--background);
   color: var(--text-main);
   min-height: 100vh;
-  /* Premium Apple-like gradient background: Pastel Pink & Blue */
+  /* Premium Gradient Background */
   background-image: 
-    radial-gradient(circle at 10% 0%, rgba(255, 182, 193, 0.3) 0%, transparent 50%),
-    radial-gradient(circle at 90% 10%, rgba(173, 216, 230, 0.35) 0%, transparent 50%),
-    radial-gradient(circle at 50% 100%, rgba(255, 240, 245, 0.4) 0%, transparent 50%);
+    radial-gradient(circle at 10% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 90% 10%, rgba(6, 182, 212, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 50% 100%, rgba(129, 140, 248, 0.1) 0%, transparent 50%);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   touch-action: manipulation; /* Prevents double-tap zoom on mobile */
@@ -173,13 +173,13 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent) 0%, #FF8A9B 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-blue) 100%);
   color: #fff;
-  box-shadow: 0 4px 15px rgba(255, 107, 129, 0.3);
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
 }
 
 .btn-primary:hover:not(:disabled) {
-  box-shadow: 0 8px 25px rgba(255, 107, 129, 0.4);
+  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
   transform: translateY(-2px);
 }
 
