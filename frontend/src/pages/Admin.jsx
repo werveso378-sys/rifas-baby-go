@@ -79,7 +79,7 @@ const Admin = () => {
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard | manage
 
   // Create Raffle States
-  const [newRaffle, setNewRaffle] = useState({ title: '', totalNumbers: 100, price: 0.01 });
+  const [newRaffle, setNewRaffle] = useState({ title: '', totalNumbers: 100, price: 0.01, instantWins: '' });
   const [isCreatingRaffle, setIsCreatingRaffle] = useState(false);
   const [rawImageSrc, setRawImageSrc] = useState(null);
   const [croppedImageBlob, setCroppedImageBlob] = useState(null);
@@ -373,6 +373,23 @@ const Admin = () => {
     }
   };
 
+  const handleCropComplete = (croppedBlob) => {
+    setCroppedImageBlob(croppedBlob);
+    setCroppedImagePreview(URL.createObjectURL(croppedBlob));
+    setRawImageSrc(null);
+  };
+
+  const generateRandomInstantWins = () => {
+    const qty = parseInt(prompt("Quantos números aleatórios de Bônus deseja gerar? (Ex: 5)"), 10);
+    if (!qty) return;
+    const max = newRaffle.totalNumbers;
+    const generated = new Set();
+    while(generated.size < qty && generated.size < max) {
+      generated.add(Math.floor(Math.random() * max) + 1);
+    }
+    setNewRaffle({...newRaffle, instantWins: Array.from(generated).join(', ')});
+  };
+
   const handleAudioUpload = async (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -401,6 +418,10 @@ const Admin = () => {
       return;
     }
     
+    const parsedInstantWins = newRaffle.instantWins 
+      ? newRaffle.instantWins.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n))
+      : [];
+
     let uploadedImageUrl = null;
     if (croppedImageBlob) {
       setUploadProgress(1);
@@ -411,11 +432,12 @@ const Admin = () => {
 
     const id = await createRaffle({
       ...newRaffle,
+      instantWins: parsedInstantWins,
       coverUrl: uploadedImageUrl
     });
     
     if (id) {
-      setNewRaffle({ title: '', totalNumbers: 100, price: 0.01 });
+      setNewRaffle({ title: '', totalNumbers: 100, price: 0.01, instantWins: '' });
       setRawImageSrc(null);
       setCroppedImageBlob(null);
       setCroppedImagePreview(null);
@@ -655,28 +677,28 @@ const Admin = () => {
               </div>
 
               {/* Ações */}
-              <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', paddingTop: '4px' }}>
                 {client.status === 'PENDING_PAYMENT' && (
-                  <button onClick={() => sendWhatsAppReminder(client)} style={{ ...actionBtnStyle, background: '#EAF8F1', color: '#34C759' }}>
-                    <MessageCircle size={14} /> Lembrar
+                  <button onClick={() => sendWhatsAppReminder(client)} style={{ ...actionBtnStyle, background: '#EAF8F1', color: '#34C759', padding: '10px 0' }}>
+                    <MessageCircle size={16} /> Lembrar
                   </button>
                 )}
                 {client.status === 'PENDING_PAYMENT' && (
-                  <button onClick={() => verifyPayment(client)} style={{ ...actionBtnStyle, background: '#F0F8FF', color: '#007AFF', border: '1px solid #007AFF' }}>
-                    🔍 Verificar
+                  <button onClick={() => verifyPayment(client)} style={{ ...actionBtnStyle, background: '#F0F8FF', color: '#007AFF', border: '1px solid #007AFF', padding: '10px 0' }}>
+                    <Search size={16} /> Verificar
                   </button>
                 )}
-                <button onClick={() => openEditModal(client)} style={{ ...actionBtnStyle, background: '#F0F4FF', color: '#007AFF' }}>
-                  <Edit2 size={14} /> Editar
+                <button onClick={() => openEditModal(client)} style={{ ...actionBtnStyle, background: '#F0F4FF', color: '#007AFF', padding: '10px 0' }}>
+                  <Edit2 size={16} /> Editar
                 </button>
                 {client.status !== 'CANCELED' && (
-                  <button onClick={() => handleCancelClient(client)} style={{ ...actionBtnStyle, background: '#FFF0F2', color: '#FF3B30' }}>
-                    <Trash2 size={14} /> {client.status === 'PAID' ? 'Estornar' : 'Cancelar'}
+                  <button onClick={() => handleCancelClient(client)} style={{ ...actionBtnStyle, background: '#FFF0F2', color: '#FF3B30', padding: '10px 0' }}>
+                    <Trash2 size={16} /> {client.status === 'PAID' ? 'Estornar' : 'Cancelar'}
                   </button>
                 )}
                 {client.status === 'CANCELED' && (
-                  <button onClick={() => handleEraseHistory(client)} style={{ ...actionBtnStyle, background: '#FFF0F2', color: '#FF3B30' }}>
-                    <Trash2 size={14} /> Apagar
+                  <button onClick={() => handleEraseHistory(client)} style={{ ...actionBtnStyle, background: '#FFF0F2', color: '#FF3B30', padding: '10px 0', gridColumn: 'span 2' }}>
+                    <Trash2 size={16} /> Apagar do Histórico
                   </button>
                 )}
               </div>
@@ -723,6 +745,29 @@ const Admin = () => {
                     <input type="number" required min="0.01" step="0.01" className="input-field" value={newRaffle.price} onChange={e => setNewRaffle({...newRaffle, price: parseFloat(e.target.value)})} />
                   </div>
                 </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={labelStyle}>Números Bônus (Vírgula)</label>
+                    <input type="text" placeholder="Ex: 5, 20, 88" className="input-field" value={newRaffle.instantWins} onChange={e => setNewRaffle({...newRaffle, instantWins: e.target.value})} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                    <button type="button" onClick={generateRandomInstantWins} className="btn" style={{ background: '#FFF3E0', color: '#FF9500', padding: '14px', width: '100%', border: 'none' }}>
+                      🎲 Gerar Aleatórios
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label style={labelStyle}>Imagem de Fundo (Opcional)</label>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <input type="file" accept="image/*" id="raffleImageInput" style={{ display: 'none' }} onChange={handleFileChange} />
+                    <button type="button" onClick={() => document.getElementById('raffleImageInput').click()} className="btn" style={{ background: '#F0F4FF', color: '#007AFF', padding: '14px', border: '1px dashed #007AFF', flex: 1 }}>
+                      📸 Escolher Imagem
+                    </button>
+                    {croppedImagePreview && (
+                      <img src={croppedImagePreview} alt="Preview" style={{ width: '45px', height: '80px', objectFit: 'cover', borderRadius: '8px' }} />
+                    )}
+                  </div>
+                </div>
                 {/* Simplified Coupon generation for now */}
                 <div>
                   <label style={labelStyle}>Cupom (Ex: Leve 10 Pague Menos)</label>
@@ -730,10 +775,21 @@ const Admin = () => {
                     <span style={{ fontSize: '0.8rem', color: '#999' }}>*Ajustaremos cupons detalhados em breve*</span>
                   </div>
                 </div>
-                <button type="submit" className="btn btn-primary" style={{ marginTop: '8px' }}>Criar Rifa</button>
+                <button type="submit" className="btn btn-primary" style={{ marginTop: '8px' }}>
+                  {uploadProgress === 1 ? 'Enviando Imagem...' : 'Criar Rifa'}
+                </button>
               </form>
             )}
           </div>
+
+          {/* Render Cropper se tiver imagem bruta */}
+          {rawImageSrc && (
+            <ImageCropper 
+              imageSrc={rawImageSrc} 
+              onCropComplete={handleCropComplete} 
+              onCancel={() => setRawImageSrc(null)} 
+            />
+          )}
 
           {/* Lista de Rifas Existentes */}
           <h2 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '-8px' }}>Rifas Atuais ({raffles.length})</h2>

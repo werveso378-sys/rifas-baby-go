@@ -63,7 +63,7 @@ const ImageCropper = ({ imageSrc, onCropComplete, onCancel }) => {
           image={imageSrc}
           crop={crop}
           zoom={zoom}
-          aspect={16 / 9}
+          aspect={9 / 16}
           onCropChange={setCrop}
           onCropComplete={onCropCompleteHandler}
           onZoomChange={setZoom}

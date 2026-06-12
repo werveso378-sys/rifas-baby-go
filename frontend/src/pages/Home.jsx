@@ -63,9 +63,18 @@ const Home = () => {
             colors: ['#00E676', '#34C759', '#FFD700', '#FF9F0A']
           });
         });
+
+        // Achou Ganhou Logic
+        const instantWins = raffle?.instantWins || [];
+        const foundWins = selectedNumbers.filter(n => instantWins.includes(n));
+        if (foundWins.length > 0) {
+          setTimeout(() => {
+            alert(`🎉 ACHOU GANHOU! 🎉\n\nParabéns! Você encontrou os seguintes números premiados: ${foundWins.join(', ')}\n\nTire um print desta tela e envie para o administrador para receber seu prêmio na hora!`);
+          }, 1500);
+        }
       }
     }
-  }, [numbersData, pixData, selectedNumbers]);
+  }, [numbersData, pixData, selectedNumbers, raffle]);
 
   // Active Raffle State
   const [raffle, setRaffle] = useState(null);
