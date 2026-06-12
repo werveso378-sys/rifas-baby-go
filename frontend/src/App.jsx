@@ -7,6 +7,8 @@ import ClientArea from './pages/ClientArea';
 import { Capacitor } from '@capacitor/core';
 import { getAppVersion } from './services/firebaseService';
 import UpdateModal from './components/UpdateModal';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import './index.css';
 
 // Separate component to use hooks inside BrowserRouter
@@ -76,6 +78,8 @@ function App() {
   return (
     <HashRouter>
       <AppInner />
+      <Analytics />
+      <SpeedInsights />
     </HashRouter>
   );
 }
