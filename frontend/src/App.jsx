@@ -5,12 +5,17 @@ import Home from './pages/Home';
 import Admin from './pages/Admin';
 import ClientArea from './pages/ClientArea';
 import { Capacitor } from '@capacitor/core';
+import { getAppVersion } from './services/firebaseService';
+import UpdateModal from './components/UpdateModal';
 import './index.css';
 
 // Separate component to use hooks inside BrowserRouter
 function AppInner() {
   const [isDark, setIsDark] = useState(false);
   const navigate = useNavigate();
+
+  const LOCAL_VERSION = '1.0.0'; // Define a versão local do App
+  const [updateData, setUpdateData] = useState(null);
 
   useEffect(() => {
     // Restore theme only
@@ -24,6 +29,15 @@ function AppInner() {
     if (Capacitor.isNativePlatform()) {
       navigate('/admin', { replace: true });
     }
+
+    // Check for Updates
+    const checkUpdate = async () => {
+      const data = await getAppVersion();
+      if (data && data.version && data.version > LOCAL_VERSION) {
+        setUpdateData(data);
+      }
+    };
+    checkUpdate();
   }, [navigate]);
 
   const toggleTheme = () => {
@@ -40,23 +54,9 @@ function AppInner() {
 
   return (
     <>
-      {/* Theme Toggle Button — floating bottom right */}
-      <button
-        onClick={toggleTheme}
-        style={{
-          position: 'fixed', bottom: '24px', right: '24px', zIndex: 9999,
-          background: 'var(--surface)', border: '1px solid rgba(255,255,255,0.2)',
-          borderRadius: '50%', width: '48px', height: '48px',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', boxShadow: 'var(--shadow-soft)', backdropFilter: 'blur(10px)'
-        }}
-      >
-        {isDark
-          ? <Moon size={24} className="animate-spin-slower" color="#5AC8FA" />
-          : <Sun size={24} className="animate-spin-slow" color="#FF9500" />
-        }
-      </button>
-
+      {updateData && Capacitor.isNativePlatform() && (
+        <UpdateModal versionData={updateData} onClose={() => setUpdateData(null)} />
+      )}
       <main style={{ paddingBottom: '100px', paddingTop: '20px' }}>
         <Routes>
           <Route path="/" element={

@@ -2,6 +2,11 @@
 // Funciona em todos os navegadores modernos e PWAs.
 
 let globalAudioCtx = null;
+let customAudios = {
+  ding: null,
+  cash: null,
+  cancel: null
+};
 
 export const initAudio = () => {
   if (!globalAudioCtx) {
@@ -16,6 +21,12 @@ export const initAudio = () => {
   }
 };
 
+export const loadCustomAudios = (urls) => {
+  if (urls?.dingUrl) customAudios.ding = new Audio(urls.dingUrl);
+  if (urls?.cashUrl) customAudios.cash = new Audio(urls.cashUrl);
+  if (urls?.cancelUrl) customAudios.cancel = new Audio(urls.cancelUrl);
+};
+
 const getAudioContext = () => {
   initAudio();
   return globalAudioCtx;
@@ -26,6 +37,12 @@ const getAudioContext = () => {
  * Usado quando a pessoa gera o QR Code / reserva os números
  */
 export const playDing = () => {
+  if (customAudios.ding) {
+    customAudios.ding.currentTime = 0;
+    customAudios.ding.play().catch(e => console.warn('Audio play failed:', e));
+    return;
+  }
+
   const ctx = getAudioContext();
   if (!ctx) return;
 
@@ -55,6 +72,12 @@ export const playDing = () => {
  * Usado quando o pagamento é confirmado
  */
 export const playCashRegister = () => {
+  if (customAudios.cash) {
+    customAudios.cash.currentTime = 0;
+    customAudios.cash.play().catch(e => console.warn('Audio play failed:', e));
+    return;
+  }
+
   const ctx = getAudioContext();
   if (!ctx) return;
 
@@ -94,4 +117,30 @@ export const playCashRegister = () => {
     osc.start(t);
     osc.stop(t + dur + 0.05);
   });
+};
+
+export const playCancel = () => {
+  if (customAudios.cancel) {
+    customAudios.cancel.currentTime = 0;
+    customAudios.cancel.play().catch(e => console.warn('Audio play failed:', e));
+    return;
+  }
+  
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(300, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.5);
+  
+  gain.gain.setValueAtTime(0.3, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+  
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.5);
 };

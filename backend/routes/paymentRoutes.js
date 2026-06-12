@@ -30,8 +30,18 @@ let pushSubscriptions = [];
   }
 })();
 
-// Helper: Send push to all admin subscriptions
+// Helper: Send push to all admin subscriptions (Web Push & FCM)
 const sendPushToAdmin = async (title, body, tag = 'rifababy') => {
+  // 1. Android FCM Native Push
+  try {
+    let sound = 'default';
+    if (tag === 'pagamento-confirmado') sound = 'kaching';
+    await firebaseAdminService.sendPushNotification(title, body, sound);
+  } catch (err) {
+    console.error('[Push] FCM Error:', err.message);
+  }
+
+  // 2. Web Push (fallback/desktop)
   const payload = JSON.stringify({ title, body, icon: '/banner.png', tag, url: '/admin' });
   const dead = [];
   await Promise.all(pushSubscriptions.map(async (sub, i) => {

@@ -4,7 +4,7 @@ import { listenToNumbers, reserveNumbers, cancelReservation, listenToRaffles } f
 import { generatePix } from '../services/paymentService';
 import NumberGrid from '../components/NumberGrid';
 import BottomSheetModal from '../components/BottomSheetModal';
-import { Copy, QrCode, CheckCircle, ChevronRight, Check, Sparkles, Clock as ClockIcon } from 'lucide-react';
+import { Copy, QrCode, CheckCircle, ChevronRight, Check, Sparkles, Clock as ClockIcon, Baby } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://rifas-baby-go.onrender.com/api';
 
@@ -51,6 +51,18 @@ const Home = () => {
       });
       if (allPaid) {
         setPixData(prev => ({ ...prev, paid: true }));
+        try {
+          if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+        } catch (e) {}
+        import('canvas-confetti').then((module) => {
+          const confetti = module.default;
+          confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#00E676', '#34C759', '#FFD700', '#FF9F0A']
+          });
+        });
       }
     }
   }, [numbersData, pixData, selectedNumbers]);
@@ -64,6 +76,16 @@ const Home = () => {
       const active = raffles.find(r => r.status === 'ACTIVE' || r.status === 'PAUSED');
       setRaffle(active || null);
     });
+
+    // Load custom audios from settings
+    import('../services/firebaseService').then(m => {
+      m.getSettings().then(settings => {
+        if (settings) {
+          import('../services/soundService').then(s => s.loadCustomAudios(settings));
+        }
+      });
+    });
+
     return () => unsubscribe();
   }, []);
 
@@ -99,6 +121,31 @@ const Home = () => {
       if (prev.includes(num)) return prev.filter(n => n !== num);
       return [...prev, num].sort((a, b) => a - b);
     });
+  };
+
+  const handleAutoPick = (qty) => {
+    const total = raffle?.totalNumbers || 100;
+    const available = [];
+    for (let i = 1; i <= total; i++) {
+      const isTaken = numbersData.some(n => n.number === i && n.status !== 'AVAILABLE' && n.status !== 'CANCELED');
+      if (!isTaken && !selectedNumbers.includes(i)) {
+        available.push(i);
+      }
+    }
+    
+    if (available.length < qty) {
+      alert(`Apenas ${available.length} números livres no momento.`);
+      qty = available.length;
+    }
+    
+    if (qty > 0) {
+      const shuffled = available.sort(() => 0.5 - Math.random());
+      const picked = shuffled.slice(0, qty);
+      setSelectedNumbers(prev => {
+        const merged = new Set([...prev, ...picked]);
+        return Array.from(merged).sort((a, b) => a - b);
+      });
+    }
   };
 
   const PRECO = raffle?.price || 0.01;
@@ -238,8 +285,14 @@ const Home = () => {
 
   if (!raffle) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: '20px' }}>
-        <h2 style={{ color: 'var(--text-color)' }}>Nenhuma rifa disponível no momento.</h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', background: 'var(--background)' }}>
+        <div style={{ background: 'var(--surface-solid)', padding: '40px', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', maxWidth: '400px', width: '90%', textAlign: 'center' }}>
+          <div style={{ width: '80px', height: '80px', background: '#FFECF0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', color: '#FF6B81' }}>
+            <Baby size={48} strokeWidth={1.5} />
+          </div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '12px', color: 'var(--text-color)' }}>Nenhuma rifa ativa</h2>
+          <p style={{ color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '0' }}>O organizador está preparando novidades incríveis. Volte em breve para não perder!</p>
+        </div>
       </div>
     );
   }
@@ -273,10 +326,10 @@ const Home = () => {
         }}
       >
         <img 
-          src="/baby_shower_header.png" 
+          src={raffle.coverUrl || "/baby_shower_header.png"} 
           alt="Banner Rifa"
           style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.9 }}
-          onError={(e) => { e.target.onerror = null; e.target.src = "/banner.png" }}
+          onError={(e) => { e.target.onerror = null; e.target.src = "/baby_shower_header.png" }}
         />
         {/* Gradiente sutil em cima e embaixo */}
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '40%', background: 'linear-gradient(to bottom, rgba(0,0,0,0.5), transparent)' }}></div>
@@ -303,7 +356,7 @@ const Home = () => {
 
       <div style={{ padding: '0 16px', marginTop: '5px' }}>
         <div className="glass" style={{ padding: '20px', background: 'var(--surface-solid)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <h2 style={{ fontSize: '1.2rem', color: 'var(--primary-dark)', margin: 0 }}>Números</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               {localStorage.getItem('clientSessionPhone') && (
@@ -312,6 +365,23 @@ const Home = () => {
                 </button>
               )}
               <span style={{ fontWeight: 'bold', color: 'var(--accent)' }}>R$ {PRECO.toFixed(2).replace('.',',')}</span>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <p className="animate-pulse" style={{ color: '#FF3B30', fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '12px', textAlign: 'center' }}>
+              🔥 Faltam {raffle?.totalNumbers ? (raffle.totalNumbers - numbersData.filter(n => n.status !== 'AVAILABLE' && n.status !== 'CANCELED').length) : 100} números!
+            </p>
+            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px' }}>
+              <button className="btn" onClick={() => handleAutoPick(5)} style={{ flex: 1, padding: '8px', background: 'var(--accent-pink)', color: '#FFF', fontSize: '0.85rem' }}>
+                <Sparkles size={14} style={{ display: 'inline', marginRight: '4px' }} /> Surpresa +5
+              </button>
+              <button className="btn" onClick={() => handleAutoPick(10)} style={{ flex: 1, padding: '8px', background: '#FF9500', color: '#FFF', fontSize: '0.85rem' }}>
+                <Sparkles size={14} style={{ display: 'inline', marginRight: '4px' }} /> Surpresa +10
+              </button>
+              <button className="btn" onClick={() => handleAutoPick(20)} style={{ flex: 1, padding: '8px', background: '#34C759', color: '#FFF', fontSize: '0.85rem' }}>
+                <Sparkles size={14} style={{ display: 'inline', marginRight: '4px' }} /> Surpresa +20
+              </button>
             </div>
           </div>
           
@@ -434,17 +504,17 @@ const Home = () => {
             </div>
           </div>
         ) : (
-          <div className="animate-fade-in" style={{ textAlign: 'center' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px', color: 'var(--accent)' }}>
-              <CheckCircle size={48} />
-            </div>
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '4px', color: 'var(--primary-dark)' }}>Quase Lá, {name.split(' ')[0]}!</h2>
-            <div style={{ background: '#FFF0F2', padding: '6px 16px', borderRadius: '20px', display: 'inline-block', marginBottom: '20px' }}>
-              <span style={{ color: '#FF6B81', fontWeight: 'bold' }}>
-                Expira em: {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
-              </span>
-            </div>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '20px' }}>Copie a chave abaixo ou escaneie o QR Code.</p>
+            <div className="animate-fade-in" style={{ textAlign: 'center' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px', color: 'var(--accent)' }}>
+                <CheckCircle size={48} />
+              </div>
+              <h2 style={{ fontSize: '1.5rem', marginBottom: '4px', color: 'var(--primary-dark)' }}>Quase Lá, {name.split(' ')[0]}!</h2>
+              <div className="pulse-timer" style={{ background: '#FFF0F2', padding: '6px 16px', borderRadius: '20px', display: 'inline-block', marginBottom: '20px', animation: 'pulse 1.5s infinite' }}>
+                <span style={{ color: '#FF6B81', fontWeight: 'bold' }}>
+                  ⏳ Expira em: {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
+                </span>
+              </div>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '20px' }}>Copie a chave abaixo ou escaneie o QR Code.</p>
             
             {(pixData.qrCode || pixData.pix?.qr_code) && (
               <img 

@@ -1,5 +1,6 @@
 const { initializeApp, cert } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { getMessaging } = require('firebase-admin/messaging');
 const path = require('path');
 
 let db;
@@ -81,8 +82,40 @@ async function updateNumberStatusByTxid(raffleId, txid, newStatus) {
   }
 }
 
+async function sendPushNotification(title, body, sound = 'default') {
+  try {
+    const settingsDoc = await db.collection('settings').doc('global').get();
+    if (!settingsDoc.exists) return;
+    
+    const token = settingsDoc.data().fcmToken;
+    if (!token) return;
+
+    const message = {
+      notification: {
+        title,
+        body,
+      },
+      android: {
+        notification: {
+          sound: sound, // e.g. 'kaching'
+          channelId: 'rifas_vendas',
+          icon: 'ic_stat_name', // transparent silhouette icon
+          color: '#00E676'
+        }
+      },
+      token: token
+    };
+
+    await getMessaging().send(message);
+    console.log(`Push notification enviada: ${title}`);
+  } catch (error) {
+    console.error('Erro ao enviar push notification:', error);
+  }
+}
+
 module.exports = {
   db,
   updateNumberStatus,
-  updateNumberStatusByTxid
+  updateNumberStatusByTxid,
+  sendPushNotification
 };

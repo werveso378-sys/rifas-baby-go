@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { listenToNumbers, listenToRaffles, createRaffle, updateRaffle, cancelReservation, updateReservation, eraseHistory } from '../services/firebaseService';
+import { Home, Music, Upload, CheckCircle, Activity, LayoutDashboard, Copy, Settings as SettingsIcon, Plus, Play, Pause, RefreshCw, Trash2, Tag, LogOut, ArrowLeft, Sun, Moon, Bell, MessageCircle, Eye, EyeOff, Edit2, X, Check, Clock, PauseCircle, PlayCircle, Search, ImageIcon } from 'lucide-react';
+import { listenToNumbers, listenToRaffles, createRaffle, updateRaffle, cancelReservation, updateReservation, eraseHistory, getSettings, updateSettings, uploadFile } from '../services/firebaseService';
 import { refundPayment } from '../services/paymentService';
 import { playDing, playCashRegister, initAudio } from '../services/soundService';
-import { MessageCircle, Bell, Eye, EyeOff, ArrowLeft, Trash2, Edit2, X, Check, Clock, Plus, PauseCircle, PlayCircle, Settings, Search, Sun, Moon } from 'lucide-react';
+import ImageCropper from '../components/ImageCropper';
+import { initPushNotifications } from '../services/pushService';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://rifas-baby-go.onrender.com/api';
 const VAPID_PUBLIC = 'BLqLhw2gqsuw7dX15HJmL9mx652r3FBViKcbjTYsvPf1BNGOiORuW8mAeoQHnb9d0h3ZB0XacxfriFq-FHm6FPY';
@@ -79,10 +81,19 @@ const Admin = () => {
   // Create Raffle States
   const [newRaffle, setNewRaffle] = useState({ title: '', totalNumbers: 100, price: 0.01 });
   const [isCreatingRaffle, setIsCreatingRaffle] = useState(false);
+  const [rawImageSrc, setRawImageSrc] = useState(null);
+  const [croppedImageBlob, setCroppedImageBlob] = useState(null);
+  const [croppedImagePreview, setCroppedImagePreview] = useState(null);
+  const [globalSettings, setGlobalSettings] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   // Listen to all raffles
   useEffect(() => {
     if (!auth) return;
+    initPushNotifications();
+    
+    getSettings().then(setGlobalSettings);
+
     const unsubscribe = listenToRaffles((data) => {
       setRaffles(data);
       if (!activeRaffleId && data.length > 0) {
@@ -223,6 +234,20 @@ const Admin = () => {
     return Math.max(0, Math.floor((new Date(expiresAt).getTime() - now) / 1000));
   };
 
+  const sendWhatsAppRecovery = (client) => {
+    const lines = [
+      'Oi! Tudo bem? 😊',
+      '',
+      `Vi que você gerou um PIX para a nossa rifa (${currentRaffle.title}) mas os números expiraram.`,
+      '',
+      'Ainda dá tempo de garantir a sua chance de ganhar! Quer que eu gere um novo Pix para você?',
+      '',
+      'Aguardo seu retorno! ✨'
+    ];
+    const text = encodeURIComponent(lines.join('\n'));
+    window.open(`https://wa.me/${client.whatsapp.replace(/\D/g, '')}?text=${text}`, '_blank');
+  };
+
   const sendWhatsAppReminder = (client) => {
     const valor = (client.numbers.length * PRECO).toFixed(2).replace('.', ',');
     const nums = client.numbers.sort((a, b) => a - b).join(', ');
@@ -298,9 +323,17 @@ const Admin = () => {
 
   const confirmCancel = async () => {
     if (!cancelClient) return;
-    await cancelReservation(RAFFLE_ID, cancelClient.numbers);
-    setCancelClient(null);
-    showToast('❌ Cancelado! Números liberados no site.');
+    try {
+      const success = await cancelReservation(activeRaffleId, cancelClient.numbers);
+      if (success) {
+        setCancelClient(null);
+        showToast('❌ Cancelado! Números liberados no site.');
+      } else {
+        showToast('Erro ao cancelar. Verifique a conexão.');
+      }
+    } catch (e) {
+      showToast('Erro crítico: ' + e.message);
+    }
   };
 
   const handleEraseHistory = async (client) => {
@@ -329,18 +362,66 @@ const Admin = () => {
     }
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setRawImageSrc(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAudioUpload = async (e, type) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadProgress(1); // just a flag to show loading
+    try {
+      const path = `audio/${type}_${Date.now()}.mp3`;
+      const url = await uploadFile(file, path);
+      if (url) {
+        await updateSettings({ [type]: url });
+        setGlobalSettings(prev => ({ ...prev, [type]: url }));
+        alert('Áudio atualizado com sucesso!');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao fazer upload do áudio');
+    } finally {
+      setUploadProgress(0);
+    }
+  };
+
   const handleCreateRaffle = async (e) => {
     e.preventDefault();
     if (!newRaffle.title || newRaffle.totalNumbers <= 0 || newRaffle.price <= 0) {
       alert("Preencha todos os campos corretamente.");
       return;
     }
-    const id = await createRaffle(newRaffle);
+    
+    let uploadedImageUrl = null;
+    if (croppedImageBlob) {
+      setUploadProgress(1);
+      const path = `raffles/cover_${Date.now()}.jpg`;
+      uploadedImageUrl = await uploadFile(croppedImageBlob, path);
+      setUploadProgress(0);
+    }
+
+    const id = await createRaffle({
+      ...newRaffle,
+      coverUrl: uploadedImageUrl
+    });
+    
     if (id) {
-      setIsCreatingRaffle(false);
       setNewRaffle({ title: '', totalNumbers: 100, price: 0.01 });
-      showToast('🎉 Nova rifa criada com sucesso!');
+      setRawImageSrc(null);
+      setCroppedImageBlob(null);
+      setCroppedImagePreview(null);
+      setIsCreatingRaffle(false);
       setActiveRaffleId(id);
+      showToast('🎉 Rifa Criada com Sucesso!');
     } else {
       alert("Erro ao criar rifa.");
     }
@@ -402,8 +483,8 @@ const Admin = () => {
           
           {/* Top Navbar */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', paddingTop: '12px' }}>
-            <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: 'var(--text-color)', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '1.2rem', fontWeight: 'bold' }}>
-              <ArrowLeft size={24} /> Painel
+            <button onClick={() => navigate('/')} style={{ background: 'var(--surface-solid)', border: '1px solid rgba(128,128,128,0.1)', color: 'var(--primary-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: '10px', borderRadius: '50%', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
+              <Home size={24} />
             </button>
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               <button 
@@ -413,9 +494,9 @@ const Admin = () => {
                   // Trigger a re-render just to update the icon visually if needed
                   setNow(Date.now() + 1);
                 }} 
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-color)', display: 'flex' }}
+                style={{ background: 'var(--surface-solid)', border: '1px solid rgba(128,128,128,0.1)', cursor: 'pointer', color: 'var(--text-color)', display: 'flex', padding: '10px', borderRadius: '50%', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}
               >
-                {document.body.classList.contains('dark') ? <Sun size={24} /> : <Moon size={24} />}
+                {document.body.classList.contains('dark') ? <Sun size={24} className="animate-spin-slower" color="#5AC8FA" /> : <Moon size={24} className="animate-spin-slow" color="#FF9500" />}
               </button>
               <button onClick={handleLogout} style={{ background: '#FFF0F2', color: '#FF3B30', border: 'none', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' }}>
                 Sair
@@ -468,12 +549,72 @@ const Admin = () => {
               )}
 
               {/* Dashboard Cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '24px' }}>
-                <div style={dashCardStyle}><div style={dashTitleStyle}>Arrecadado</div><div style={{ ...dashValueStyle, color: 'var(--primary-dark)' }}>R$ {totalRevenue.toFixed(2).replace('.', ',')}</div></div>
-                <div style={dashCardStyle}><div style={dashTitleStyle}>Números Pagos</div><div style={{ ...dashValueStyle, color: '#34C759' }}>{paidNumbers}/{totalNumbers}</div></div>
-                <div style={dashCardStyle}><div style={dashTitleStyle}>Aguardando Pix</div><div style={{ ...dashValueStyle, color: '#FF9500' }}>{pendingNumbers}</div></div>
-                <div style={dashCardStyle}><div style={dashTitleStyle}>Livres</div><div style={{ ...dashValueStyle, color: '#007AFF' }}>{totalNumbers - paidNumbers - pendingNumbers}</div></div>
+              {/* Dashboard Cards - Kiwify Style */}
+              <div style={{ background: '#121214', margin: '-16px -16px 24px -16px', padding: '24px 16px', borderRadius: '0 0 24px 24px', position: 'relative', overflow: 'hidden' }}>
+                {/* Decorative gradients */}
+                <div style={{ position: 'absolute', top: -50, right: -50, width: 150, height: 150, background: 'rgba(0, 230, 118, 0.15)', filter: 'blur(50px)', borderRadius: '50%' }}></div>
+                <div style={{ position: 'absolute', bottom: -50, left: -50, width: 150, height: 150, background: 'rgba(0, 122, 255, 0.15)', filter: 'blur(50px)', borderRadius: '50%' }}></div>
+                
+                <h2 style={{ color: '#FFFFFF', margin: '0 0 16px 0', fontSize: '1.2rem', position: 'relative', zIndex: 1 }}>Visão Geral</h2>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', position: 'relative', zIndex: 1 }}>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.08)', padding: '16px', borderRadius: '16px' }}>
+                    <div style={{ fontSize: '0.8rem', color: '#A0A0A5', marginBottom: '8px', fontWeight: '500' }}>Vendas Totais</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#00E676', textShadow: '0 0 20px rgba(0,230,118,0.4)' }}>
+                      R$ {totalRevenue.toFixed(2).replace('.', ',')}
+                    </div>
+                  </div>
+                  
+                  <div style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.08)', padding: '16px', borderRadius: '16px' }}>
+                    <div style={{ fontSize: '0.8rem', color: '#A0A0A5', marginBottom: '8px', fontWeight: '500' }}>Números Pagos</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#FFFFFF' }}>
+                      {paidNumbers}<span style={{ fontSize: '0.9rem', color: '#666' }}>/{totalNumbers}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.08)', padding: '16px', borderRadius: '16px' }}>
+                    <div style={{ fontSize: '0.8rem', color: '#A0A0A5', marginBottom: '8px', fontWeight: '500' }}>Aguardando Pix</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#FF9F0A', textShadow: '0 0 20px rgba(255,159,10,0.3)' }}>
+                      {pendingNumbers}
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.08)', padding: '16px', borderRadius: '16px' }}>
+                    <div style={{ fontSize: '0.8rem', color: '#A0A0A5', marginBottom: '8px', fontWeight: '500' }}>Livres</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0A84FF', textShadow: '0 0 20px rgba(10,132,255,0.3)' }}>
+                      {totalNumbers - paidNumbers - pendingNumbers}
+                    </div>
+                  </div>
+                </div>
               </div>
+
+              {/* Abandonos Recentes Section */}
+              {clients.filter(c => c.status === 'CANCELED' && c.whatsapp).length > 0 && (
+                <div style={{ marginBottom: '24px' }}>
+                  <h2 style={{ fontSize: '1rem', color: '#FF3B30', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    🔥 Carrinhos Abandonados ({clients.filter(c => c.status === 'CANCELED' && c.whatsapp).length})
+                  </h2>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {clients.filter(c => c.status === 'CANCELED' && c.whatsapp).map((client, idx) => (
+                      <div key={`abandono-${idx}`} style={{ background: '#FFF0F2', borderRadius: '16px', padding: '16px', border: '1px solid rgba(255,59,48,0.2)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <div>
+                            <h3 style={{ margin: '0 0 4px 0', fontSize: '1rem', color: '#FF3B30' }}>{client.name}</h3>
+                            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>{client.whatsapp}</p>
+                          </div>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#FF3B30', background: 'rgba(255,59,48,0.1)', padding: '4px 8px', borderRadius: '12px' }}>Expirado</span>
+                        </div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                          Tentou comprar {client.numbers.length} número(s)
+                        </div>
+                        <button onClick={() => sendWhatsAppRecovery(client)} style={{ width: '100%', padding: '10px', background: '#25D366', color: '#FFF', border: 'none', borderRadius: '12px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                          <MessageCircle size={16} /> Recuperar Venda
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Client List */}
               <h2 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '12px' }}>Dados de Pessoas ({clients.length})</h2>
