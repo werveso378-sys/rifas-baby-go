@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import { Sun, Moon } from 'lucide-react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import Home from './pages/Home';
 import Admin from './pages/Admin';
 import ClientArea from './pages/ClientArea';
@@ -76,6 +77,7 @@ function App() {
   return (
     <HashRouter>
       <AppInner />
+      <SpeedInsights />
     </HashRouter>
   );
 }
